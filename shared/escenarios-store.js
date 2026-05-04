@@ -11,7 +11,7 @@
   const SEED_FLAG_KEY = 'regDraftsSeeded'; // para no resemilla en cada visita
   const REV_LEGACY_KEY = 'revEstados'; // se ignora, todo va al store
   const SHOW_TOAST_KEY = 'escToast'; // mensajes flotantes entre páginas
-  const GESTOR_NAME = 'Juan Hernandez Granados';
+  const GESTOR_NAME = 'Juan Hernández Granados';
   const REVISOR_NAME = 'María Alejandra Gómez';
 
   // ─── Estados y mappings DS ─────────────────────────────────────
@@ -328,9 +328,26 @@
       // ── 1. BORRADOR ─────────────────────────────
       {
         nombre: 'Centro deportivo Prado',
-        catastral: '10000101010',
+        catastral: '110011010100120000900099000110',
         departamento: 'Antioquia',
         municipio: 'Medellín',
+        lat: 6.2518, lon: -75.5636,
+        direccion: 'Cra 30 #24-50',
+        corregimiento: '',
+        zona: 'Urbana',
+        entidad: 'Alcaldía de Medellín',
+        propietario: 'Ente territorial',
+        administradora: 'INDER Medellín',
+        tenencia: 'Comodato',
+        telefono: '3001234567',
+        correoResp: 'juan@medellin.gov.co',
+        tipoEscenario: 'Cancha múltiple',
+        fichaComun: { areaTotal:'5000', areaUtil:'3200', cubierto:'Mixto', capacidad:'500', anioCons:'2018', anioRemod:'', estado:'Bueno' },
+        subEspacios: [
+          { nombre:'Cancha principal', tipo:'Cancha múltiple', ficha:{ dimLargo:'40', dimAncho:'20', superficie:'Concreto' } }
+        ],
+        subCount: 1,
+        disciplinas: ['Microfútbol','Baloncesto','Voleibol'],
         responsable: GESTOR_NAME,
         car: false,
         savedAt: days(2),
@@ -346,9 +363,26 @@
       // ── 2. EN REVISIÓN ──────────────────────────
       {
         nombre: 'Centro deportivo Miramar',
-        catastral: '1000020202',
+        catastral: '080010101000000010901900000099',
         departamento: 'Atlántico',
         municipio: 'Barranquilla',
+        lat: 10.9685, lon: -74.7813,
+        direccion: 'Cra 51B #87-50, El Prado',
+        corregimiento: '',
+        zona: 'Urbana',
+        entidad: 'Alcaldía de Barranquilla',
+        propietario: 'Ente territorial',
+        administradora: 'IDRD Atlántico',
+        tenencia: 'Propiedad',
+        telefono: '3002345678',
+        correoResp: 'gestor@barranquilla.gov.co',
+        tipoEscenario: 'Piscina',
+        fichaComun: { areaTotal:'2400', areaUtil:'1800', cubierto:'Cubierto', capacidad:'800', anioCons:'2014', anioRemod:'2022', estado:'Excelente' },
+        subEspacios: [
+          { nombre:'Piscina olímpica', tipo:'Piscina', ficha:{ longitud:'50', ancho:'25', profMin:'1.2', profMax:'2.5', carriles:'8', tipoPiscina:'Olímpica', tratamiento:'Cloro', climatizada:true } }
+        ],
+        subCount: 1,
+        disciplinas: ['Natación','Waterpolo','Nado sincronizado'],
         responsable: GESTOR_NAME,
         car: true,
         savedAt: days(7),
@@ -371,9 +405,26 @@
       // ── 3. ACTIVO ───────────────────────────────
       {
         nombre: 'Centro deportivo Norte',
-        catastral: '1000030303',
+        catastral: '110010101000000020101010101099',
         departamento: 'Cundinamarca',
         municipio: 'Bogotá D.C.',
+        lat: 4.6486, lon: -74.0639,
+        direccion: 'Cra 68 #55-65, Salitre',
+        corregimiento: '',
+        zona: 'Urbana',
+        entidad: 'Alcaldía Mayor de Bogotá',
+        propietario: 'Ente territorial',
+        administradora: 'IDRD Bogotá',
+        tenencia: 'Propiedad',
+        telefono: '3003456789',
+        correoResp: 'gestor@bogota.gov.co',
+        tipoEscenario: 'Coliseo',
+        fichaComun: { areaTotal:'12000', areaUtil:'8500', cubierto:'Cubierto', capacidad:'3500', anioCons:'2010', anioRemod:'2023', estado:'Bueno' },
+        subEspacios: [
+          { nombre:'Coliseo principal', tipo:'Coliseo', ficha:{ largoCancha:'40', anchoCancha:'20', superficie:'Parquet', alturaTecho:'12' } }
+        ],
+        subCount: 1,
+        disciplinas: ['Baloncesto','Voleibol','Fútbol sala','Balonmano'],
         responsable: GESTOR_NAME,
         car: true,
         savedAt: days(20),
@@ -397,9 +448,26 @@
       // ── 4. RECHAZADO (con docs rechazados y notas reales) ─────
       {
         nombre: 'Centro deportivo Sur',
-        catastral: '1000040404',
+        catastral: '760010101000000010404040404099',
         departamento: 'Valle del Cauca',
         municipio: 'Cali',
+        lat: 3.4516, lon: -76.5320,
+        direccion: 'Cl. 5 #66-00, San Fernando',
+        corregimiento: '',
+        zona: 'Urbana',
+        entidad: 'Alcaldía de Cali',
+        propietario: 'Ente territorial',
+        administradora: 'Secretaría del Deporte Cali',
+        tenencia: 'Comodato',
+        telefono: '3004567890',
+        correoResp: 'gestor@cali.gov.co',
+        tipoEscenario: 'Estadio',
+        fichaComun: { areaTotal:'45000', areaUtil:'7200', cubierto:'Descubierto', capacidad:'45000', anioCons:'1971', anioRemod:'2011', estado:'Regular' },
+        subEspacios: [
+          { nombre:'Estadio Olímpico', tipo:'Estadio', ficha:{ largoTerreno:'105', anchoTerreno:'68', superficie:'Césped natural', iluminacionPro:true, pistaAtletica:true } }
+        ],
+        subCount: 1,
+        disciplinas: ['Fútbol','Atletismo'],
         responsable: GESTOR_NAME,
         car: false,
         savedAt: days(15),

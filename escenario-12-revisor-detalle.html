@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <link rel="stylesheet" href="shared/design-system.css"/>
 <link rel="stylesheet" href="shared/shell.css"/>
+<script src="shared/sidebar-state.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    ESCENARIO 12 — Detalle de registro para el Revisor
@@ -599,45 +600,45 @@
         <!-- ═══ TAB 1: Informacion general ═══ -->
         <div class="tab-panel active" id="panelGeneral">
 
-          <!-- Datos de pre-validacion -->
+          <!-- Datos de pre-validación -->
           <div class="detail-section">
-            <h3 class="detail-section__title">Datos de pre-validacion</h3>
+            <h3 class="detail-section__title">Datos de pre-validación</h3>
             <div class="ro-grid">
               <div class="ro-field ro-field--full">
                 <span class="ro-field__label">Nombre del escenario</span>
-                <span class="ro-field__value">Centro deportivo Prado</span>
+                <span class="ro-field__value" id="fNombre">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Departamento</span>
-                <span class="ro-field__value">Antioquia</span>
+                <span class="ro-field__value" id="fDepartamento">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Municipio</span>
-                <span class="ro-field__value">Medellin</span>
+                <span class="ro-field__value" id="fMunicipio">--</span>
               </div>
               <div class="ro-field ro-field--full">
-                <span class="ro-field__label">Numero de registro catastral</span>
-                <span class="ro-field__value">10000101010</span>
+                <span class="ro-field__label">Número de registro catastral</span>
+                <span class="ro-field__value" id="fCatastral">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Latitud</span>
-                <span class="ro-field__value">6.2518</span>
+                <span class="ro-field__value" id="fLat">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Longitud</span>
-                <span class="ro-field__value">-75.5636</span>
+                <span class="ro-field__value" id="fLon">--</span>
               </div>
               <div class="ro-field ro-field--full">
-                <span class="ro-field__label">Direccion</span>
-                <span class="ro-field__value">Cra 30 #24-50</span>
+                <span class="ro-field__label">Dirección</span>
+                <span class="ro-field__value" id="fDireccion">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Corregimiento</span>
-                <span class="ro-field__value">--</span>
+                <span class="ro-field__value" id="fCorregimiento">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Zona</span>
-                <span class="ro-field__value">Urbana</span>
+                <span class="ro-field__value" id="fZona">--</span>
               </div>
             </div>
             <div class="detail-map" id="mapContainer"></div>
@@ -649,31 +650,31 @@
             <div class="ro-grid">
               <div class="ro-field">
                 <span class="ro-field__label">Entidad propietaria</span>
-                <span class="ro-field__value">Alcaldia de Medellin</span>
+                <span class="ro-field__value" id="fEntidad">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Tipo de propietario</span>
-                <span class="ro-field__value">Publico</span>
+                <span class="ro-field__value" id="fPropietario">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Entidad administradora</span>
-                <span class="ro-field__value">INDER Medellin</span>
+                <span class="ro-field__value" id="fAdministradora">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">Tipo de tenencia</span>
-                <span class="ro-field__value">Comodato</span>
+                <span class="ro-field__value" id="fTenencia">--</span>
               </div>
               <div class="ro-field ro-field--full">
                 <span class="ro-field__label">Responsable</span>
-                <span class="ro-field__value">Juan Hernandez Granados</span>
+                <span class="ro-field__value" id="fResponsable">--</span>
               </div>
               <div class="ro-field">
-                <span class="ro-field__label">Telefono</span>
-                <span class="ro-field__value">3001234567</span>
+                <span class="ro-field__label">Teléfono</span>
+                <span class="ro-field__value" id="fTelefono">--</span>
               </div>
               <div class="ro-field">
-                <span class="ro-field__label">Correo electronico</span>
-                <span class="ro-field__value">juan@ejemplo.co</span>
+                <span class="ro-field__label">Correo electrónico</span>
+                <span class="ro-field__value" id="fCorreo">--</span>
               </div>
             </div>
           </div>
@@ -684,53 +685,22 @@
             <div class="ro-grid">
               <div class="ro-field">
                 <span class="ro-field__label">Tipo de escenario</span>
-                <span class="ro-field__value">Piscina</span>
+                <span class="ro-field__value" id="fTipoEscenario">--</span>
               </div>
               <div class="ro-field">
                 <span class="ro-field__label">CAR</span>
-                <span class="ro-field__value">No</span>
+                <span class="ro-field__value" id="fCar">--</span>
               </div>
             </div>
 
-            <!-- Ficha tecnica general -->
-            <div style="margin-top:16px">
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Ficha tecnica general</div>
-              <div class="ro-grid">
-                <div class="ro-field"><span class="ro-field__label">Area total (m2)</span><span class="ro-field__value">5000</span></div>
-                <div class="ro-field"><span class="ro-field__label">Area util (m2)</span><span class="ro-field__value">3200</span></div>
-                <div class="ro-field"><span class="ro-field__label">Cubierta</span><span class="ro-field__value">Mixto</span></div>
-                <div class="ro-field"><span class="ro-field__label">Estado general</span><span class="ro-field__value">Bueno</span></div>
-                <div class="ro-field"><span class="ro-field__label">Capacidad espectadores</span><span class="ro-field__value">500</span></div>
-                <div class="ro-field"><span class="ro-field__label">Ano de construccion</span><span class="ro-field__value">2018</span></div>
-              </div>
-            </div>
+            <!-- Ficha técnica general (renderizada dinámicamente desde el store) -->
+            <div id="fichaComun" style="margin-top:16px"></div>
 
-            <!-- Sub-espacios -->
-            <div style="margin-top:16px">
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Sub-espacios (1)</div>
-              <div class="sub-card">
-                <div class="sub-card__name">Piscina Olimpica</div>
-                <div class="sub-card__grid">
-                  <div class="sub-card__item">Longitud: <span>50</span></div>
-                  <div class="sub-card__item">Ancho: <span>25</span></div>
-                  <div class="sub-card__item">Prof Min: <span>1.2</span></div>
-                  <div class="sub-card__item">Prof Max: <span>2.5</span></div>
-                  <div class="sub-card__item">Carriles: <span>8</span></div>
-                  <div class="sub-card__item">Tipo Piscina: <span>Olimpica</span></div>
-                  <div class="sub-card__item">Tratamiento: <span>Cloro</span></div>
-                </div>
-              </div>
-            </div>
+            <!-- Sub-espacios (renderizados dinámicamente) -->
+            <div id="subEspacios" style="margin-top:16px"></div>
 
-            <!-- Disciplinas -->
-            <div style="margin-top:16px">
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Disciplinas</div>
-              <div class="disc-wrap">
-                <span class="naowee-badge naowee-badge--quiet naowee-badge--informative">Natacion</span>
-                <span class="naowee-badge naowee-badge--quiet naowee-badge--informative">Waterpolo</span>
-                <span class="naowee-badge naowee-badge--quiet naowee-badge--informative">Clavados</span>
-              </div>
-            </div>
+            <!-- Disciplinas (renderizadas dinámicamente) -->
+            <div id="disciplinas" style="margin-top:16px"></div>
           </div>
 
         </div>
@@ -1121,6 +1091,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="shared/escenarios-store.js"></script>
 <script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -1143,6 +1115,113 @@
   // El estado real proviene del store; param sólo es fallback
   const recStatusToParam = { 'revision':'por-revisar', 'activo':'activo', 'rechazado':'rechazado' };
   const estado = (record && recStatusToParam[record.status]) || urlParams.get('estado') || 'por-revisar';
+
+  /* ═══ Populate dinámico desde el record del store ═══
+     Antes la pantalla mostraba siempre el mismo escenario (Prado hardcoded);
+     ahora cada campo lee del registro seleccionado por idx. */
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : '--';
+  };
+  if (record) {
+    // Header
+    const dt = document.getElementById('detailTitle');
+    const di = document.getElementById('detailId');
+    if (dt) dt.textContent = record.nombre || '--';
+    if (di) di.textContent = 'ID: ' + (record.catastral || '--');
+
+    // Datos de pre-validación
+    setText('fNombre', record.nombre);
+    setText('fDepartamento', record.departamento);
+    setText('fMunicipio', record.municipio);
+    setText('fCatastral', record.catastral);
+    setText('fLat', record.lat);
+    setText('fLon', record.lon);
+    setText('fDireccion', record.direccion);
+    setText('fCorregimiento', record.corregimiento);
+    setText('fZona', record.zona);
+
+    // Datos de propiedad
+    setText('fEntidad', record.entidad);
+    setText('fPropietario', record.propietario);
+    setText('fAdministradora', record.administradora);
+    setText('fTenencia', record.tenencia);
+    setText('fResponsable', record.responsable);
+    setText('fTelefono', record.telefono);
+    setText('fCorreo', record.correoResp);
+
+    // Datos deportivos
+    setText('fTipoEscenario', record.tipoEscenario);
+    setText('fCar', record.car ? 'Sí' : 'No');
+
+    // Ficha técnica general — render dinámico
+    if (record.fichaComun) {
+      const c = record.fichaComun;
+      const fcEl = document.getElementById('fichaComun');
+      if (fcEl) {
+        const items = [
+          ['Área total (m²)', c.areaTotal],
+          ['Área útil (m²)', c.areaUtil],
+          ['Cubierta', c.cubierto],
+          ['Estado general', c.estado],
+          ['Capacidad espectadores', c.capacidad],
+          ['Año de construcción', c.anioCons],
+          ['Año última remodelación', c.anioRemod]
+        ];
+        fcEl.innerHTML =
+          '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Ficha técnica general</div>' +
+          '<div class="ro-grid">' +
+          items.map(([label, v]) =>
+            `<div class="ro-field"><span class="ro-field__label">${label}</span><span class="ro-field__value">${v && v !== '' ? v : '--'}</span></div>`
+          ).join('') +
+          '</div>';
+      }
+    }
+
+    // Disciplinas — render dinámico
+    if (record.disciplinas && record.disciplinas.length > 0) {
+      const dEl = document.getElementById('disciplinas');
+      if (dEl) {
+        dEl.innerHTML =
+          '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Disciplinas</div>' +
+          '<div class="disc-wrap">' +
+          record.disciplinas.map(d => `<span class="naowee-badge naowee-badge--quiet naowee-badge--informative">${d}</span>`).join('') +
+          '</div>';
+      }
+    }
+
+    // Sub-espacios — render dinámico (lista variable según tipo)
+    if (record.subEspacios && record.subEspacios.length > 0) {
+      const seEl = document.getElementById('subEspacios');
+      if (seEl) {
+        const FIELD_LABELS = {
+          longitud:'Longitud (m)', ancho:'Ancho (m)', profMin:'Prof. mínima (m)', profMax:'Prof. máxima (m)',
+          carriles:'Carriles', tipoPiscina:'Tipo de piscina', tratamiento:'Tratamiento', climatizada:'Climatizada',
+          dimLargo:'Largo (m)', dimAncho:'Ancho (m)', superficie:'Superficie',
+          largoCancha:'Largo cancha (m)', anchoCancha:'Ancho cancha (m)', alturaTecho:'Altura techo (m)',
+          largoTerreno:'Largo terreno (m)', anchoTerreno:'Ancho terreno (m)',
+          iluminacionPro:'Iluminación profesional', pistaAtletica:'Pista atlética perimetral'
+        };
+        const cards = record.subEspacios.map(sub => {
+          const ficha = sub.ficha || {};
+          const items = Object.entries(ficha).map(([k,v]) => {
+            const lbl = FIELD_LABELS[k] || k;
+            const val = (typeof v === 'boolean') ? (v ? 'Sí' : 'No') : v;
+            return `<div class="sub-card__item">${lbl}: <span>${val}</span></div>`;
+          }).join('');
+          return `
+            <div class="sub-card">
+              <div class="sub-card__name">${sub.nombre || sub.tipo || 'Sub-espacio'}</div>
+              <div class="sub-card__grid">${items}</div>
+            </div>
+          `;
+        }).join('');
+        seEl.innerHTML =
+          `<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Sub-espacios (${record.subEspacios.length})</div>` +
+          cards;
+      }
+    }
+  }
 
   // Helper: persistir cambio de estado del registro (delega al store)
   function persistRevEstado(idx, nuevoEstado, motivo) {

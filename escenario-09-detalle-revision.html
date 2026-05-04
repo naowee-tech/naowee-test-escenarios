@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="shared/design-system.css"/>
 <link rel="stylesheet" href="shared/shell.css"/>
 <link rel="stylesheet" href="shared/transitions.css"/>
+<script src="shared/sidebar-state.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    ESCENARIO 09 — Detalle de registro en revisión
@@ -578,6 +579,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="shared/escenarios-store.js"></script>
 <script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -794,15 +797,15 @@
   // ═══ TAB 2: Documentación ═══
   const DOC_FIELDS = [
     ['fotoFrontalGeneral','Foto frontal general','JPG / PNG'],
-    ['fotoPanoramica','Foto panoramica','JPG / PNG'],
+    ['fotoPanoramica','Foto panorámica','JPG / PNG'],
     ['fotoInstalaciones','Fotos instalaciones','JPG / PNG'],
     ['planoEscenario','Plano del escenario','PDF / DWG'],
-    ['planoLocalizacion','Plano de localizacion','PDF / DWG'],
+    ['planoLocalizacion','Plano de localización','PDF / DWG'],
     ['docPropiedad','Documento de propiedad','PDF'],
     ['conceptoBomberos','Concepto bomberos','PDF'],
     ['conceptoSalud','Concepto salud','PDF'],
     ['conceptoInfraestructura','Concepto infraestructura','PDF'],
-    ['resolucionCreacion','Resolucion de creacion','PDF']
+    ['resolucionCreacion','Resolución de creación','PDF']
   ];
 
   // Fecha de fotos
