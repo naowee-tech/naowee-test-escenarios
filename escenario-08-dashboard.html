@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="shared/design-system.css"/>
 <link rel="stylesheet" href="shared/shell.css"/>
 <link rel="stylesheet" href="shared/transitions.css"/>
+<!-- Sidebar state (sync, antes del primer paint para evitar flicker) -->
+<script src="shared/sidebar-state.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    ESCENARIO 08 — Sedes y escenarios (dashboard ciudadano)
@@ -141,7 +143,7 @@
   color:var(--accent);font-weight:600;
 }
 
-/* ═══ TABLA ═══ */
+/* ═══ TABLA — paridad con naowee-test-sidebar-shell (sedes-list refinado) ═══ */
 .naowee-scenarios-table{
   width:100%;border-collapse:separate;border-spacing:0;
 }
@@ -149,11 +151,11 @@
   background:#f4f5f9;
 }
 .naowee-scenarios-table thead th{
-  height:64px;padding:8px 8px;
-  font-size:16px;font-weight:600;line-height:20px;
+  height:44px;padding:8px 12px;
+  font-size:11px;font-weight:600;line-height:16px;
   color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:.04em;
   text-align:left;vertical-align:middle;
-  font-feature-settings:'case' 1;
 }
 .naowee-scenarios-table thead th:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px;padding-left:20px}
 .naowee-scenarios-table thead th:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px;padding-right:20px;text-align:center;width:72px}
@@ -165,26 +167,30 @@
 .naowee-scenarios-table tbody tr:last-child{border-bottom:none}
 .naowee-scenarios-table tbody tr:hover{background:#fafbfc}
 .naowee-scenarios-table tbody td{
-  height:88px;padding:16px 8px;vertical-align:middle;
+  height:80px;padding:14px 12px;vertical-align:middle;
   font-family:'Inter',sans-serif;font-feature-settings:'case' 1;
 }
 .naowee-scenarios-table tbody td:first-child{padding-left:20px}
 .naowee-scenarios-table tbody td:last-child{padding-right:20px;text-align:center;width:72px}
 
 .cell-name{
-  font-size:14px;font-weight:400;line-height:18px;color:var(--text-primary);
+  font-size:14px;font-weight:500;line-height:18px;color:var(--text-primary);
 }
-.cell-id,.cell-car{
-  font-size:16px;font-weight:400;line-height:24px;color:var(--text-primary);
+.cell-id{
+  font-family:'SF Mono',Menlo,Consolas,monospace;
+  font-size:13px;font-weight:400;line-height:18px;color:var(--text-secondary);
+}
+.cell-car{
+  font-size:14px;font-weight:400;line-height:18px;color:var(--text-primary);
 }
 .cell-modified{
-  display:flex;flex-direction:column;gap:6px;align-items:flex-start;
+  display:flex;flex-direction:column;gap:2px;align-items:flex-start;
 }
 .cell-modified__date{
-  font-size:14px;font-weight:400;line-height:18px;color:var(--text-primary);
+  font-size:13px;font-weight:400;line-height:18px;color:var(--text-primary);
 }
 .cell-modified__user{
-  font-size:12px;font-weight:400;line-height:16px;color:#9c9ebf;
+  font-size:12px;font-weight:400;line-height:16px;color:var(--text-secondary);
 }
 
 /* Column widths */
@@ -287,8 +293,12 @@
   to{opacity:1;transform:translateX(0)}
 }
 
-/* Overrides para el botón loud large matching Figma (48px / 24px padding) */
-.cta-main .naowee-btn--loud{height:48px;padding:0 24px;border-radius:12px;font-size:14px}
+/* Botón loud large — paridad sidebar-shell refinado (48px / 32px padding / 16px font).
+   El hover glow elevation lo aplica shared/shell.css globalmente. */
+.cta-main .naowee-btn--loud,
+.reg-modal__footer .naowee-btn--loud{
+  height:48px;padding:2px 32px;border-radius:12px;font-size:16px;font-weight:500;
+}
 
 /* Paginator spacing fix — más aire alrededor del input y entre controles */
 .tablet-toolbar .naowee-pagination{gap:24px}
@@ -331,18 +341,22 @@
 .field-error-wiggle{animation:wiggle .4s ease}
 
 .reg-modal{
-  width:576px;max-width:100%;max-height:calc(100vh - 48px);
+  width:680px;max-width:calc(100vw - 48px);max-height:calc(100vh - 48px);
   background:#fff;border-radius:16px;
   box-shadow:0 24px 48px rgba(0,0,0,.25);
   display:flex;flex-direction:column;
   animation:regScale .35s cubic-bezier(.175,.885,.32,1.275);
   overflow:hidden;
 }
-/* Modal 3 es más ancho para acomodar el stepper horizontal con labels al costado */
+/* Modal 3 — paridad con el wizard (mismo width que pre-validación) */
 #regModal3Overlay .reg-modal{width:680px}
 @keyframes regScale{
-  from{opacity:0;transform:scale(.92) translateY(24px)}
-  to{opacity:1;transform:scale(1) translateY(0)}
+  /* Sólo opacity — cualquier transform en el modal (scale o translate) crea
+     un nuevo containing block para position:fixed descendants, rompiendo el
+     posicionamiento de los menus flotantes (.naowee-dropdown__menu--floating)
+     que dependen de viewport coords. */
+  from{opacity:0}
+  to{opacity:1}
 }
 
 .reg-modal__header{
@@ -375,8 +389,8 @@
 
 .reg-modal__body{
   flex:1;min-height:0;overflow-y:auto;
-  padding:24px;
-  display:flex;flex-direction:column;gap:24px;
+  padding:20px 24px;
+  display:flex;flex-direction:column;gap:16px;
   scroll-behavior:smooth;
 }
 /* Scrollbar styling */
@@ -384,25 +398,29 @@
 .reg-modal__body::-webkit-scrollbar-thumb{background:#d0d4e6;border-radius:4px}
 .reg-modal__body::-webkit-scrollbar-thumb:hover{background:#8788ab}
 
+/* Section title — paridad sidebar-shell .sd-form-section */
 .reg-section__title{
-  font-size:12px;font-weight:600;line-height:16px;letter-spacing:.2px;
-  color:#9c9ebf;text-transform:uppercase;
-  margin:0 0 12px;
+  font-size:11px;font-weight:700;line-height:16px;letter-spacing:.4px;
+  color:#9ca0b8;text-transform:uppercase;
+  margin:0;padding:0;border:none;
 }
-.reg-section__title:not(:first-child){margin-top:8px}
 
 .reg-row{
   display:grid;grid-template-columns:1fr 1fr;gap:16px;
 }
 .reg-row > *{min-width:0}
 
-/* Leaflet map */
+/* Leaflet map — paridad sidebar-shell (.sd-map): tile filter blanco-suave */
 .reg-map-wrap{
   position:relative;width:100%;height:220px;flex-shrink:0;
   border-radius:12px;overflow:hidden;
   border:1px solid var(--border);
 }
 #regMap,#regMap0{width:100%;height:100%;background:#f5f6fa}
+/* Filtro tiles para look más blanco/limpio (paridad sidebar-shell) */
+.reg-map-wrap .leaflet-tile{
+  filter:saturate(0.6) brightness(1.06) contrast(0.95);
+}
 .reg-map-fs{
   position:absolute;top:12px;right:12px;z-index:500;
   width:32px;height:32px;border-radius:8px;
@@ -412,9 +430,9 @@
 }
 .reg-map-fs:hover{background:#f5f6fa}
 .reg-map-fs svg{width:16px;height:16px;color:var(--accent)}
-.reg-map-actions{display:flex;gap:4px}
-.reg-map-actions .naowee-btn{flex:1;font-size:12px;padding:0 12px}
-.reg-map-actions .naowee-btn svg{width:16px;height:16px}
+/* Map action buttons — paridad .sd-map-actions: gap 12px, flex:1 sin overrides */
+.reg-map-actions{display:flex;gap:12px}
+.reg-map-actions .naowee-btn{flex:1}
 /* Marker estilo (usa divIcon inline svg) */
 .geo-marker{background:transparent;border:none}
 
@@ -539,14 +557,15 @@
   background:var(--naowee-color-interactive-fill-mute-hover,#FFEDC7);
 }
 
-/* Footer */
+/* Footer — paridad sidebar-shell .sd-modal__footer */
 .reg-modal__footer{
-  flex-shrink:0;padding:16px 24px 24px;
+  flex-shrink:0;padding:16px 24px;
   border-top:1px solid #d0d4e6;
   background:#fff;position:relative;z-index:2;
+  display:flex;gap:12px;
 }
 .reg-modal__footer .naowee-btn{
-  width:100%;height:48px;font-size:14px;border-radius:12px;
+  flex:1;height:48px;border-radius:12px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -600,6 +619,11 @@
 /* ── Horario de atención: grupos + chips de días + timepickers ── */
 .reg-horario{display:flex;flex-direction:column;gap:14px}
 .reg-horario__field{display:flex;flex-direction:column;gap:8px}
+/* Override segment clip para evitar que el pill (con border-radius 8px) se
+   recorte contra los corners del segment (border-radius 12px). Aplica a los
+   segments del modal de registro. */
+.reg-tipo-infra-wrap .naowee-segment,
+#reg2HorarioPresets{ overflow:visible }
 .reg-horario__label{
   font-size:14px;font-weight:400;line-height:18px;
   color:var(--text-primary);
@@ -1320,7 +1344,7 @@
           <div class="ava-dot"></div>
         </div>
         <div class="user-info">
-          <span class="user-name">Juan Hernandez</span>
+          <span class="user-name">Juan Hernández</span>
           <span class="user-role">Gestor de escen...</span>
         </div>
         <button class="user-chip__chevron" type="button" aria-label="Cambiar rol" onclick="const w=this.closest('#userChipWrap');w.querySelector('.role-dropdown').classList.toggle('open');w.classList.toggle('is-open')">
@@ -1691,6 +1715,30 @@
           </div>
         </div>
 
+        <!-- Tipo de infraestructura (correo SUID 15-Abr-2026) — sliding pill -->
+        <div class="reg-horario reg-tipo-infra-wrap" style="margin-bottom:8px">
+          <label class="reg-horario__label" for="reg3TipoInfraSeg">Tipo de infraestructura<span class="req">*</span></label>
+          <div class="naowee-segment naowee-segment--small naowee-segment--proportional" id="reg3TipoInfraSeg" role="tablist">
+            <span class="naowee-segment__pill naowee-segment__pill--no-anim" aria-hidden="true"></span>
+            <button type="button" class="naowee-segment__item" data-tipo-infra="Recreativa" role="tab" aria-selected="false">Recreativa</button>
+            <button type="button" class="naowee-segment__item" data-tipo-infra="Alta competencia" role="tab" aria-selected="false">Alta competencia</button>
+          </div>
+        </div>
+
+        <!-- Tipo de infraestructura general -->
+        <div class="naowee-dropdown" id="reg3TipoInfraGenDD">
+          <label class="naowee-dropdown__label" for="reg3TipoInfraGenTrigger">Tipo de infraestructura general <span style="color:var(--naowee-color-text-accent,#d74009)">*</span></label>
+          <button type="button" class="naowee-dropdown__trigger" id="reg3TipoInfraGenTrigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="naowee-dropdown__placeholder" id="reg3TipoInfraGenValue">Selecciona</span>
+            <span class="naowee-dropdown__controls">
+              <span class="naowee-dropdown__chevron">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </span>
+          </button>
+          <div class="naowee-dropdown__menu" role="listbox" id="reg3TipoInfraGenMenu"></div>
+        </div>
+
         <div class="naowee-dropdown" id="reg3TipoEscDD">
           <label class="naowee-dropdown__label" for="reg3TipoEscTrigger">Tipo de escenario <span style="color:var(--naowee-color-text-accent,#d74009)">*</span></label>
           <button type="button" class="naowee-dropdown__trigger" id="reg3TipoEscTrigger" aria-haspopup="listbox" aria-expanded="false">
@@ -1819,6 +1867,61 @@
             </div>
             <!-- Secciones por disciplina (renderizadas por JS) -->
             <div id="reg3DisciplinesList"></div>
+          </div>
+        </div>
+
+        <!-- ── Programas y uso (correo SUID 21-Abr-2026 — censo de escenarios) ── -->
+        <h3 class="reg-section__title">PROGRAMAS Y USO</h3>
+
+        <div class="naowee-textfield">
+          <label class="naowee-textfield__label" for="reg3Descripcion">Descripción del escenario</label>
+          <div class="naowee-textfield__input-wrap" style="height:auto;align-items:stretch;padding:8px 12px">
+            <textarea id="reg3Descripcion" class="naowee-textfield__input" rows="3"
+              placeholder="Describe brevemente el escenario, su entorno y características distintivas"
+              style="resize:vertical;min-height:72px;padding:0;line-height:18px"></textarea>
+          </div>
+        </div>
+
+        <!-- Programas del Ministerio (multi-select) -->
+        <div class="reg-multi" id="reg3ProgramasMulti">
+          <label class="reg-multi__label">Programas del Ministerio que se ejecutan en el escenario</label>
+          <button type="button" class="reg-multi__trigger" id="reg3ProgramasTrigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="reg-multi__chips" id="reg3ProgramasChips">
+              <span class="reg-multi__placeholder">Selecciona uno o más programas</span>
+            </span>
+            <svg class="reg-multi__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="reg-multi__menu" role="listbox">
+            <div class="reg-multi__options" id="reg3ProgramasOptions"></div>
+            <div class="reg-multi__menu-footer">
+              <button type="button" class="naowee-btn naowee-btn--loud naowee-btn--small" id="reg3ProgramasConfirm">
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="reg-row">
+          <div class="naowee-textfield">
+            <label class="naowee-textfield__label" for="reg3ProgramaActual">Programa que se desarrolla actualmente</label>
+            <div class="naowee-textfield__input-wrap">
+              <input type="text" id="reg3ProgramaActual" class="naowee-textfield__input" placeholder="Ej: Liga local de microfútbol"/>
+            </div>
+          </div>
+          <div class="naowee-textfield">
+            <label class="naowee-textfield__label" for="reg3PoblacionMensual">Población mensual atendida</label>
+            <div class="naowee-textfield__input-wrap">
+              <input type="text" id="reg3PoblacionMensual" class="naowee-textfield__input" inputmode="numeric" placeholder="Ej: 1.500" data-numeric="thousands"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="naowee-textfield">
+          <label class="naowee-textfield__label" for="reg3OtrosUsos">Otros usos (no deportivos)</label>
+          <div class="naowee-textfield__input-wrap" style="height:auto;align-items:stretch;padding:8px 12px">
+            <textarea id="reg3OtrosUsos" class="naowee-textfield__input" rows="2"
+              placeholder="Ej: eventos comunitarios, ferias, conciertos, jornadas de salud"
+              style="resize:vertical;min-height:60px;padding:0;line-height:18px"></textarea>
           </div>
         </div>
 
@@ -2153,12 +2256,13 @@
       <div class="reg-horario" id="reg2HorarioWrap">
         <label class="reg-horario__label">Días y horarios de atención<span class="req">*</span></label>
 
-        <!-- Presets rápidos -->
+        <!-- Presets rápidos — segment con sliding pill (paridad mapa carSegment) -->
         <div class="naowee-segment naowee-segment--small naowee-segment--proportional" id="reg2HorarioPresets" role="tablist">
-          <button type="button" class="naowee-segment__item" data-preset="lun-vie">L-V igual</button>
-          <button type="button" class="naowee-segment__item" data-preset="todos">Todos los días</button>
-          <button type="button" class="naowee-segment__item" data-preset="lv-finde">L-V + Fin de semana</button>
-          <button type="button" class="naowee-segment__item" data-preset="custom">Personalizado</button>
+          <span class="naowee-segment__pill naowee-segment__pill--no-anim" aria-hidden="true"></span>
+          <button type="button" class="naowee-segment__item" data-preset="lun-vie" role="tab" aria-selected="false">L-V igual</button>
+          <button type="button" class="naowee-segment__item" data-preset="todos" role="tab" aria-selected="false">Todos los días</button>
+          <button type="button" class="naowee-segment__item" data-preset="lv-finde" role="tab" aria-selected="false">L-V + Fin de semana</button>
+          <button type="button" class="naowee-segment__item" data-preset="custom" role="tab" aria-selected="false">Personalizado</button>
         </div>
 
         <!-- Container de grupos (renderizado dinámicamente) -->
@@ -2367,6 +2471,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="shared/escenarios-store.js"></script>
 <script src="shared/transitions.js"></script>
+<script src="shared/colombia-municipios.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
    MODE SWITCHER
@@ -2416,7 +2523,7 @@
       car: typeof d.car === 'boolean' ? (d.car ? 'Sí' : 'No') : (d.car || '—'),
       state: meta,
       modifiedDate: formatDraftDate(d.sentAt || d.reviewedAt || d.savedAt),
-      modifiedBy: 'De ' + (d.responsable || (window.EscStore ? window.EscStore.GESTOR_NAME : 'Juan Hernandez Granados')),
+      modifiedBy: 'De ' + (d.responsable || (window.EscStore ? window.EscStore.GESTOR_NAME : 'Juan Hernández Granados')),
       action: isEditable ? 'edit' : 'view',
       storeIdx: originalIdx,
       status: d.status
@@ -2626,42 +2733,8 @@ window.applyEsc08Filters = function(){
    Usa los mismos componentes del DS que el wizard público
    ═══════════════════════════════════════════════════════════════ */
 (function(){
-  /* ─── DATA (copiada del wizard público) ─── */
-  const COLOMBIA = {
-    'Amazonas':['Leticia','Puerto Nariño'],
-    'Antioquia':['Medellín','Bello','Envigado','Itagüí','Sabaneta','Rionegro','Apartadó','Turbo'],
-    'Arauca':['Arauca','Saravena','Tame','Arauquita'],
-    'Atlántico':['Barranquilla','Soledad','Malambo','Puerto Colombia','Galapa','Sabanalarga','Santo Tomás','Baranoa'],
-    'Bogotá D.C.':['Bogotá'],
-    'Bolívar':['Cartagena','Magangué','Turbaco','El Carmen de Bolívar','Arjona'],
-    'Boyacá':['Tunja','Duitama','Sogamoso','Chiquinquirá','Paipa'],
-    'Caldas':['Manizales','Villamaría','Chinchiná','La Dorada','Riosucio'],
-    'Caquetá':['Florencia','San Vicente del Caguán','Puerto Rico','La Montañita'],
-    'Casanare':['Yopal','Aguazul','Villanueva','Tauramena','Paz de Ariporo'],
-    'Cauca':['Popayán','Santander de Quilichao','Puerto Tejada','Patía','Piendamó'],
-    'Cesar':['Valledupar','Aguachica','Bosconia','Codazzi','La Jagua de Ibirico'],
-    'Chocó':['Quibdó','Istmina','Tadó','Condoto','Riosucio'],
-    'Córdoba':['Montería','Lorica','Cereté','Sahagún','Tierralta','Planeta Rica'],
-    'Cundinamarca':['Soacha','Zipaquirá','Chía','Facatativá','Girardot','Fusagasugá','Mosquera','Madrid','Cajicá'],
-    'Guainía':['Inírida'],
-    'Guaviare':['San José del Guaviare','Calamar','El Retorno'],
-    'Huila':['Neiva','Pitalito','Garzón','La Plata','Campoalegre'],
-    'La Guajira':['Riohacha','Maicao','Uribia','Manaure','San Juan del Cesar'],
-    'Magdalena':['Santa Marta','Ciénaga','Fundación','El Banco','Plato'],
-    'Meta':['Villavicencio','Acacías','Granada','Puerto López','Cumaral'],
-    'Nariño':['Pasto','Ipiales','Tumaco','Túquerres','La Unión'],
-    'Norte de Santander':['Cúcuta','Ocaña','Pamplona','Villa del Rosario','Los Patios'],
-    'Putumayo':['Mocoa','Puerto Asís','Orito','Valle del Guamuez','Puerto Caicedo'],
-    'Quindío':['Armenia','Calarcá','Montenegro','La Tebaida','Quimbaya'],
-    'Risaralda':['Pereira','Dosquebradas','Santa Rosa de Cabal','La Virginia','Belén de Umbría'],
-    'San Andrés y Providencia':['San Andrés','Providencia'],
-    'Santander':['Bucaramanga','Floridablanca','Girón','Piedecuesta','Barrancabermeja','San Gil'],
-    'Sucre':['Sincelejo','Corozal','Sampués','San Marcos','Tolú'],
-    'Tolima':['Ibagué','Espinal','Melgar','Honda','Chaparral'],
-    'Valle del Cauca':['Cali','Palmira','Buenaventura','Tuluá','Cartago','Buga','Yumbo','Jamundí'],
-    'Vaupés':['Mitú','Carurú'],
-    'Vichada':['Puerto Carreño','La Primavera','Cumaribo']
-  };
+  /* ─── DATA — fuente de verdad: shared/colombia-municipios.js ─── */
+  const COLOMBIA = window.COLOMBIA_MUNICIPIOS;
   const TIPOS_PROPIETARIO = [
     'Ente territorial (municipio/departamento)',
     'Entidad deportiva',
@@ -3058,7 +3131,7 @@ window.applyEsc08Filters = function(){
   initDropdown('regMunicipioDD', [], () => {}, true);
 
   // Zona
-  initDropdown('regZonaDD', ['Urbana','Rural','Centro'], (val) => {
+  initDropdown('regZonaDD', ['Urbana','Rural','Centro poblado'], (val) => {
     regState.zona = val;
     validate();
   });
@@ -3525,9 +3598,62 @@ window.applyEsc08Filters = function(){
       if(presetSig === signature){ activeKey = key; break; }
     }
     document.querySelectorAll('#reg2HorarioPresets .naowee-segment__item').forEach(btn => {
-      btn.classList.toggle('naowee-segment__item--active', btn.dataset.preset === activeKey);
+      const isActive = btn.dataset.preset === activeKey;
+      btn.classList.toggle('naowee-segment__item--active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
+    positionHorarioPresetPill();
   }
+
+  /* Posiciona el sliding pill del segment de presets sobre el item activo.
+     Paridad 1:1 con positionSegmentPill del mapa (esc-13). El primer
+     posicionamiento (cuando el pill aún no tiene width) salta sin animación
+     para evitar que aparezca deslizándose desde la izquierda al abrir modal.
+     Si el segment aún no es visible (modal cerrado), reintenta con setTimeout. */
+  function positionHorarioPresetPill(retries = 12){
+    const seg = document.getElementById('reg2HorarioPresets');
+    if(!seg) return;
+    const pill = seg.querySelector('.naowee-segment__pill');
+    const active = seg.querySelector('.naowee-segment__item--active');
+    if(!pill || !active) return;
+    // offsetWidth/offsetLeft NO se ven afectados por scale del padre (modal usa
+    // transform:scale en su animación de entrada). getBoundingClientRect SÍ se
+    // afecta — por eso usamos offset* aquí.
+    if(seg.offsetWidth === 0 || active.offsetWidth === 0){
+      // Segment aún no visible (modal cerrado o animando); reintentamos
+      if(retries > 0) setTimeout(() => positionHorarioPresetPill(retries - 1), 60);
+      return;
+    }
+    // active.offsetLeft es relativo al offset parent (segment, position:relative).
+    // El pill tiene left:0 = padding-edge del segment. active.offsetLeft incluye
+    // ese padding. Compensamos restando el segment padding-left.
+    const segStyle = getComputedStyle(seg);
+    const segPadL = parseFloat(segStyle.paddingLeft) || 0;
+    const x = active.offsetLeft - segPadL;
+    const w = active.offsetWidth;
+    const isFirst = pill.offsetWidth <= 4; // pill con sólo borde (~4px) = sin posicionar
+    if(isFirst){
+      pill.classList.add('naowee-segment__pill--no-anim');
+      pill.style.setProperty('--segment-pill-x', x + 'px');
+      pill.style.width = w + 'px';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pill.classList.remove('naowee-segment__pill--no-anim');
+      }));
+    } else {
+      pill.classList.remove('naowee-segment__pill--no-anim');
+      pill.style.setProperty('--segment-pill-x', x + 'px');
+      pill.style.width = w + 'px';
+    }
+  }
+  // Reposicionar al cambiar tamaño de ventana (col-2 puede cambiar de ancho)
+  window.addEventListener('resize', () => positionHorarioPresetPill(0));
+  // ResizeObserver: cualquier cambio de ancho del segment (apertura del modal,
+  // animación de scale, layout settling) dispara reposicionar el pill
+  (() => {
+    const seg = document.getElementById('reg2HorarioPresets');
+    if(!seg || !window.ResizeObserver) return;
+    new ResizeObserver(() => positionHorarioPresetPill(0)).observe(seg);
+  })();
 
   // Genera markup de un grupo
   function renderGroupHTML(groupIdx){
@@ -4791,7 +4917,7 @@ window.applyEsc08Filters = function(){
 
   // Superficies disponibles para ficha física de disciplinas (cuando NO es compartido)
   const SUPERFICIES_DEPORTIVAS = [
-    'Parquet','Sintético','Concreto','Goma','Madera','Asfalto','Grass natural','Grass sintético','Tartán','Tierra','Otra'
+    'Parquet','Sintético','Concreto','Goma','Madera','Asfalto','Césped natural','Césped sintético','Tartán','Tierra','Otra'
   ];
 
   /* ═══════════════════════════════════════════════════════════════
@@ -4812,9 +4938,7 @@ window.applyEsc08Filters = function(){
         { id:'dimLargo', label:'Largo de la cancha (m)', type:'decimal', required:true },
         { id:'dimAncho', label:'Ancho de la cancha (m)', type:'decimal', required:true },
         { id:'superficie', label:'Tipo de superficie', type:'dropdown', required:true,
-          options:['Parquet','Sintético','Concreto','Goma','Asfalto','Otra'] },
-        { id:'cubierta', label:'Cubierta', type:'dropdown', required:true,
-          options:['Techado','Semi-techado','Abierto'] }
+          options:['Parquet','Sintético','Concreto','Goma','Asfalto','Otra'] }
       ],
       disciplinas: ['Fútbol sala','Microfútbol','Baloncesto','Voleibol','Balonmano','Tenis','Bádminton','Hockey sobre patines'],
       fichaPorDisciplina: [
@@ -4864,9 +4988,7 @@ window.applyEsc08Filters = function(){
         { id:'largoTerreno', label:'Largo terreno de juego (m)', type:'decimal', required:true },
         { id:'anchoTerreno', label:'Ancho terreno de juego (m)', type:'decimal', required:true },
         { id:'superficie', label:'Tipo de superficie', type:'dropdown', required:true,
-          options:['Grass natural','Grass sintético','Híbrido','Tierra'] },
-        { id:'cubierta', label:'Cubierta', type:'dropdown', required:true,
-          options:['Total','Parcial','Descubierto'] },
+          options:['Césped natural','Césped sintético','Híbrido','Tierra'] },
         { id:'iluminacionPro', label:'Iluminación profesional', type:'toggle' },
         { id:'pistaAtletica', label:'Tiene pista atlética perimetral', type:'toggle' }
       ],
@@ -5222,16 +5344,38 @@ window.applyEsc08Filters = function(){
 
   // Opciones comunes de la ficha física base
   const CUBIERTO_OPTIONS = ['Cubierto','Descubierto','Mixto'];
-  const ESTADO_CONSERVACION = ['Excelente','Bueno','Regular','Malo'];
+  // Escala oficial del censo (correo SUID 21-Abr-2026): 4 niveles
+  const ESTADO_CONSERVACION = ['Óptimo','Bueno','Regular','Malo'];
+  // Clasificación oficial (correo SUID 15-Abr-2026)
+  const TIPO_INFRAESTRUCTURA = ['Recreativa','Alta competencia'];
+  const TIPO_INFRA_GENERAL = ['Deportiva','Recreativa','Mixto'];
+  // Programas del Ministerio del Deporte (catálogo de demo)
+  const PROGRAMAS_MINISTERIO = [
+    'Supérate-Intercolegiados',
+    'Centros de Iniciación y Formación Deportiva (CIFD)',
+    'Hábitos y Estilos de Vida Saludable',
+    'Deporte Social Comunitario',
+    'Talento Deportivo',
+    'Deporte para Todos',
+    'Juegos Comunales',
+    'Recreación y Aprovechamiento del Tiempo Libre'
+  ];
 
   /* ─── STATE del modal 3 (extendido) ─── */
   const reg3State = {
     car: false,
     tipoEscenario: '',
+    tipoInfraestructura: '',  // Recreativa / Alta competencia
+    tipoInfraGeneral: '',     // Deportiva / Recreativa / Mixto
     fichaComun: {
       areaTotal: '', areaUtil: '', cubierto: '',
       capacidad: '', anioCons: '', anioRemod: '', estado: ''
     },
+    descripcion: '',
+    programasMin: [],         // ids de programas seleccionados
+    programaActual: '',
+    poblacionMensual: '',
+    otrosUsos: '',
     fichaEspecifica: {}, // datos del sub-espacio 1 (retrocompatible)
     subEspacios: [], // [{ nombre:'Piscina 1', ficha:{} }, { nombre:'Piscina 2', ficha:{} }]
     subCount: 1,
@@ -5566,6 +5710,214 @@ window.applyEsc08Filters = function(){
     }
     validate3();
   });
+
+  /* ═══════════════════════════════════════════════════
+     Tipo de infraestructura — Segment con sliding pill
+     ═══════════════════════════════════════════════════ */
+  function positionTipoInfraSegPill(retries = 12){
+    const seg = document.getElementById('reg3TipoInfraSeg');
+    if(!seg) return;
+    const pill = seg.querySelector('.naowee-segment__pill');
+    const active = seg.querySelector('.naowee-segment__item--active');
+    if(!pill) return;
+    if(!active){
+      // Sin selección: oculta el pill (width 0)
+      pill.style.width = '0px';
+      return;
+    }
+    if(seg.offsetWidth === 0 || active.offsetWidth === 0){
+      if(retries > 0) setTimeout(() => positionTipoInfraSegPill(retries - 1), 60);
+      return;
+    }
+    const segStyle = getComputedStyle(seg);
+    const segPadL = parseFloat(segStyle.paddingLeft) || 0;
+    const x = active.offsetLeft - segPadL;
+    const w = active.offsetWidth;
+    const isFirst = pill.offsetWidth <= 4;
+    pill.style.setProperty('--segment-pill-x', x + 'px');
+    pill.style.width = w + 'px';
+    if(isFirst){
+      pill.classList.add('naowee-segment__pill--no-anim');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pill.classList.remove('naowee-segment__pill--no-anim');
+      }));
+    }
+  }
+  document.querySelectorAll('#reg3TipoInfraSeg [data-tipo-infra]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.tipoInfra;
+      reg3State.tipoInfraestructura = val;
+      document.querySelectorAll('#reg3TipoInfraSeg [data-tipo-infra]').forEach(b => {
+        const active = b.dataset.tipoInfra === val;
+        b.classList.toggle('naowee-segment__item--active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      positionTipoInfraSegPill();
+      validate3 && validate3();
+    });
+  });
+  // Reposicionar al abrir modal 3 (ResizeObserver detecta cuando seg se hace visible)
+  (() => {
+    const seg = document.getElementById('reg3TipoInfraSeg');
+    if(!seg || !window.ResizeObserver) return;
+    new ResizeObserver(() => positionTipoInfraSegPill(0)).observe(seg);
+  })();
+
+  /* ═══════════════════════════════════════════════════
+     Tipo de infraestructura general — Dropdown
+     ═══════════════════════════════════════════════════ */
+  initDropdown('reg3TipoInfraGenDD', TIPO_INFRA_GENERAL, (val) => {
+    reg3State.tipoInfraGeneral = val;
+    validate3 && validate3();
+  });
+
+  /* ═══════════════════════════════════════════════════
+     Programas del Ministerio — Multi-select (patrón reg-multi)
+     ═══════════════════════════════════════════════════ */
+  (() => {
+    const wrap = document.getElementById('reg3ProgramasMulti');
+    const trigger = document.getElementById('reg3ProgramasTrigger');
+    const optionsEl = document.getElementById('reg3ProgramasOptions');
+    const chips = document.getElementById('reg3ProgramasChips');
+    const confirmBtn = document.getElementById('reg3ProgramasConfirm');
+    if(!wrap || !trigger || !optionsEl || !chips || !confirmBtn) return;
+    let temp = [];
+
+    function renderOpts(){
+      optionsEl.innerHTML = '';
+      PROGRAMAS_MINISTERIO.forEach(opt => {
+        const row = document.createElement('div');
+        row.className = 'reg-multi__option' + (temp.includes(opt) ? ' reg-multi__option--selected' : '');
+        row.innerHTML = `
+          <div class="reg-multi__checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span>${opt}</span>
+        `;
+        row.addEventListener('click', e => {
+          e.stopPropagation();
+          if(temp.includes(opt)) temp = temp.filter(x => x !== opt);
+          else temp.push(opt);
+          renderOpts();
+        });
+        optionsEl.appendChild(row);
+      });
+    }
+
+    function renderChips(){
+      const list = reg3State.programasMin;
+      if(list.length === 0){
+        chips.innerHTML = '<span class="reg-multi__placeholder">Selecciona uno o más programas</span>';
+        return;
+      }
+      chips.innerHTML = list.map(p => `
+        <span class="naowee-tag naowee-tag--small naowee-tag--accent">
+          ${p}
+          <span class="naowee-tag__active-area" data-remove-prog="${p}" role="button" aria-label="Quitar ${p}">
+            <span class="naowee-tag__close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </span>
+          </span>
+        </span>
+      `).join('');
+      chips.querySelectorAll('[data-remove-prog]').forEach(el => {
+        el.addEventListener('click', e => {
+          e.stopPropagation();
+          e.preventDefault();
+          const p = el.dataset.removeProg;
+          reg3State.programasMin = reg3State.programasMin.filter(x => x !== p);
+          renderChips();
+        });
+      });
+    }
+
+    function floatMenu(){
+      const menu = wrap.querySelector('.reg-multi__menu');
+      const rect = trigger.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const spaceBelow = vh - rect.bottom;
+      const spaceAbove = rect.top;
+      const menuMaxHeight = 320;
+      menu.classList.add('reg-multi__menu--floating');
+      menu.style.width = rect.width + 'px';
+      menu.style.left = rect.left + 'px';
+      if(spaceBelow >= menuMaxHeight + 8 || spaceBelow >= spaceAbove){
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.bottom = 'auto';
+      } else {
+        menu.style.top = 'auto';
+        menu.style.bottom = (vh - rect.top + 4) + 'px';
+      }
+    }
+    function unfloatMenu(){
+      const menu = wrap.querySelector('.reg-multi__menu');
+      menu.classList.remove('reg-multi__menu--floating');
+      menu.style.width = menu.style.left = menu.style.top = menu.style.bottom = '';
+    }
+
+    function openMenu(){
+      wrap.classList.add('open');
+      floatMenu();
+      trigger.setAttribute('aria-expanded', 'true');
+      temp = [...reg3State.programasMin];
+      renderOpts();
+    }
+    function closeMenu(){
+      wrap.classList.remove('open');
+      unfloatMenu();
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      if(wrap.classList.contains('open')) closeMenu();
+      else openMenu();
+    });
+    // Outside-click cierra (en capture phase para no perderse por stopPropagation)
+    document.addEventListener('click', e => {
+      if(!wrap.classList.contains('open')) return;
+      const menuEl = wrap.querySelector('.reg-multi__menu');
+      if(wrap.contains(e.target) || (menuEl && menuEl.contains(e.target))) return;
+      closeMenu();
+    });
+    confirmBtn.addEventListener('click', () => {
+      reg3State.programasMin = [...temp];
+      closeMenu();
+      renderChips();
+    });
+    // Reposicionar al scrollear el body o resize
+    const modalBody = document.querySelector('#regModal3Overlay .reg-modal__body');
+    if(modalBody) modalBody.addEventListener('scroll', () => {
+      if(wrap.classList.contains('open')) floatMenu();
+    });
+    window.addEventListener('resize', () => {
+      if(wrap.classList.contains('open')) floatMenu();
+    });
+    renderChips();
+  })();
+
+  /* ═══════════════════════════════════════════════════
+     Inputs simples (descripción, programa actual, población, otros usos)
+     ═══════════════════════════════════════════════════ */
+  (() => {
+    const desc = document.getElementById('reg3Descripcion');
+    const progAct = document.getElementById('reg3ProgramaActual');
+    const pob = document.getElementById('reg3PoblacionMensual');
+    const otros = document.getElementById('reg3OtrosUsos');
+    if(desc) desc.addEventListener('input', () => { reg3State.descripcion = desc.value; });
+    if(progAct) progAct.addEventListener('input', () => { reg3State.programaActual = progAct.value; });
+    if(pob) pob.addEventListener('input', () => {
+      // formato thousands inline
+      const raw = pob.value.replace(/\D/g, '');
+      const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      if(formatted !== pob.value){
+        pob.value = formatted;
+        pob.setSelectionRange(formatted.length, formatted.length);
+      }
+      reg3State.poblacionMensual = raw;
+    });
+    if(otros) otros.addEventListener('input', () => { reg3State.otrosUsos = otros.value; });
+  })();
 
   /* ─── Render ficha común (bloque característica físicas de todos los tipos) ─── */
   function renderFichaComun(){
@@ -6423,9 +6775,9 @@ window.applyEsc08Filters = function(){
   // Dotación global del escenario (parqueadero, cafetería, etc.)
   const DOTACION_GLOBAL = [
     { id:'iluminacion', label:'Iluminación artificial', sub:{id:'tipoIluminacion', type:'dropdown', label:'Tipo de iluminación', options:['LED','Halógena','Fluorescente','Mixta','Otra'], required:true} },
-    { id:'tribuna', label:'Tribuna / gradería', sub:{id:'capacidadTribuna', type:'thousands', label:'Capacidad de la tribuna', required:true, placeholder:'Ej: 5.000'} },
+    { id:'tribuna', label:'Tribuna / gradería' /* Capacidad ya cubierta por "Capacidad de espectadores" en ficha común */ },
     { id:'bodega', label:'Bodega / cuarto de implementos' },
-    { id:'parqueadero', label:'Parqueadero', sub:{id:'capacidadParqueadero', type:'stepper', label:'Capacidad de vehículos', required:true} },
+    { id:'parqueadero', label:'Parqueadero', sub:{id:'capacidadParqueadero', type:'thousands', label:'Capacidad de vehículos', required:true, placeholder:'Ej: 250'} },
     { id:'accesibilidad', label:'Accesibilidad para personas con discapacidad' },
     { id:'vestieresAdaptadosPMR', label:'Vestieres adaptados para PMR' },
     { id:'banosAccesiblesGlobal', label:'Baños accesibles' },
@@ -7822,7 +8174,7 @@ window.applyEsc08Filters = function(){
           disciplinas: [...reg3State.disciplinas],
           disciplinasData: JSON.parse(JSON.stringify(reg3State.disciplinasData)),
           documentacion: JSON.parse(JSON.stringify(reg3State.documentacion)),
-          responsable: Store ? Store.GESTOR_NAME : 'Juan Hernandez Granados'
+          responsable: Store ? Store.GESTOR_NAME : 'Juan Hernández Granados'
         });
 
         let idx;

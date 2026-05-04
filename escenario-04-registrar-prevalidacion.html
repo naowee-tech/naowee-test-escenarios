@@ -308,45 +308,13 @@ body{
   </main>
 </div>
 
+<script src="shared/colombia-municipios.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   DEPARTMENTS & MUNICIPALITIES DATASET (subset para demo)
+   DEPARTMENTS & MUNICIPALITIES DATASET
+   Lista oficial DANE — fuente de verdad: shared/colombia-municipios.js
    ═══════════════════════════════════════════════════════════════ */
-const COLOMBIA = {
-  'Amazonas': ['Leticia','Puerto Nariño'],
-  'Antioquia': ['Medellín','Bello','Envigado','Itagüí','Sabaneta','Rionegro','Apartadó','Turbo'],
-  'Arauca': ['Arauca','Saravena','Tame','Arauquita'],
-  'Atlántico': ['Barranquilla','Soledad','Malambo','Puerto Colombia','Galapa','Sabanalarga','Santo Tomás','Baranoa'],
-  'Bogotá D.C.': ['Bogotá'],
-  'Bolívar': ['Cartagena','Magangué','Turbaco','El Carmen de Bolívar','Arjona'],
-  'Boyacá': ['Tunja','Duitama','Sogamoso','Chiquinquirá','Paipa'],
-  'Caldas': ['Manizales','Villamaría','Chinchiná','La Dorada','Riosucio'],
-  'Caquetá': ['Florencia','San Vicente del Caguán','Puerto Rico','La Montañita'],
-  'Casanare': ['Yopal','Aguazul','Villanueva','Tauramena','Paz de Ariporo'],
-  'Cauca': ['Popayán','Santander de Quilichao','Puerto Tejada','Patía','Piendamó'],
-  'Cesar': ['Valledupar','Aguachica','Bosconia','Codazzi','La Jagua de Ibirico'],
-  'Chocó': ['Quibdó','Istmina','Tadó','Condoto','Riosucio'],
-  'Córdoba': ['Montería','Lorica','Cereté','Sahagún','Tierralta','Planeta Rica'],
-  'Cundinamarca': ['Soacha','Zipaquirá','Chía','Facatativá','Girardot','Fusagasugá','Mosquera','Madrid','Cajicá'],
-  'Guainía': ['Inírida'],
-  'Guaviare': ['San José del Guaviare','Calamar','El Retorno'],
-  'Huila': ['Neiva','Pitalito','Garzón','La Plata','Campoalegre'],
-  'La Guajira': ['Riohacha','Maicao','Uribia','Manaure','San Juan del Cesar'],
-  'Magdalena': ['Santa Marta','Ciénaga','Fundación','El Banco','Plato'],
-  'Meta': ['Villavicencio','Acacías','Granada','Puerto López','Cumaral'],
-  'Nariño': ['Pasto','Ipiales','Tumaco','Túquerres','La Unión'],
-  'Norte de Santander': ['Cúcuta','Ocaña','Pamplona','Villa del Rosario','Los Patios'],
-  'Putumayo': ['Mocoa','Puerto Asís','Orito','Valle del Guamuez','Puerto Caicedo'],
-  'Quindío': ['Armenia','Calarcá','Montenegro','La Tebaida','Quimbaya'],
-  'Risaralda': ['Pereira','Dosquebradas','Santa Rosa de Cabal','La Virginia','Belén de Umbría'],
-  'San Andrés y Providencia': ['San Andrés','Providencia'],
-  'Santander': ['Bucaramanga','Floridablanca','Girón','Piedecuesta','Barrancabermeja','San Gil'],
-  'Sucre': ['Sincelejo','Corozal','Sampués','San Marcos','Tolú'],
-  'Tolima': ['Ibagué','Espinal','Melgar','Honda','Chaparral'],
-  'Valle del Cauca': ['Cali','Palmira','Buenaventura','Tuluá','Cartago','Buga','Yumbo','Jamundí'],
-  'Vaupés': ['Mitú','Carurú'],
-  'Vichada': ['Puerto Carreño','La Primavera','Cumaribo']
-};
+const COLOMBIA = window.COLOMBIA_MUNICIPIOS;
 
 /* ═══════════════════════════════════════════════════════════════
    DROPDOWN BEHAVIOR
