@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="shared/design-system.css"/>
 <link rel="stylesheet" href="shared/shell.css"/>
 <link rel="stylesheet" href="shared/transitions.css"/>
+<script src="shared/sidebar-state.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    ESCENARIO 10 — Perfil del escenario (estado Activo)
@@ -557,7 +558,7 @@
           <div class="ava-dot"></div>
         </div>
         <div class="user-info">
-          <span class="user-name">Juan Hernandez</span>
+          <span class="user-name">Juan Hernández</span>
           <span class="user-role">Gestor de escen...</span>
         </div>
         <button class="user-chip__chevron" type="button" aria-label="Cambiar rol" onclick="const w=this.closest('#userChipWrap');w.querySelector('.role-dropdown').classList.toggle('open');w.classList.toggle('is-open')">
@@ -884,6 +885,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="shared/escenarios-store.js"></script>
 <script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -919,7 +922,7 @@
       direccion:'Cl. 6 #No. 16-95, Salgar', corregimiento:'Salgar', zona:'Urbana',
       entidad:'Alcaldía de Puerto Colombia', propietario:'Público',
       administradora:'IDER Atlántico', tenencia:'Propio',
-      responsable:'Juan Hernandez Granados', telefono:'3001234567', correoResp:'juan@ejemplo.co',
+      responsable:'Juan Hernández Granados', telefono:'3001234567', correoResp:'juan@ejemplo.co',
       car:true, tipoEscenario:'Coliseo',
       fichaComun:{areaTotal:'12000',areaUtil:'8500',cubierto:'Cubierto',capacidad:'3500',anioCons:'2015',anioRemod:'2022',estado:'Bueno'},
       subEspacios:[{nombre:'Coliseo Principal',tipo:'Coliseo',ficha:{largoCancha:'40',anchoCancha:'20',superficie:'Parquet',alturaTecho:'12'}}],
@@ -1086,15 +1089,15 @@
   // ═══ TAB 2: Documentación ═══
   const DOC_FIELDS = [
     ['fotoFrontalGeneral','Foto frontal general','JPG / PNG'],
-    ['fotoPanoramica','Foto panoramica','JPG / PNG'],
+    ['fotoPanoramica','Foto panorámica','JPG / PNG'],
     ['fotoInstalaciones','Fotos instalaciones','JPG / PNG'],
     ['planoEscenario','Plano del escenario','PDF / DWG'],
-    ['planoLocalizacion','Plano de localizacion','PDF / DWG'],
+    ['planoLocalizacion','Plano de localización','PDF / DWG'],
     ['docPropiedad','Documento de propiedad','PDF'],
     ['conceptoBomberos','Concepto bomberos','PDF'],
     ['conceptoSalud','Concepto salud','PDF'],
     ['conceptoInfraestructura','Concepto infraestructura','PDF'],
-    ['resolucionCreacion','Resolucion de creacion','PDF']
+    ['resolucionCreacion','Resolución de creación','PDF']
   ];
 
   // Fecha de fotos

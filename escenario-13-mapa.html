@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="shared/shell.css"/>
 <link rel="stylesheet" href="shared/transitions.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="shared/sidebar-state.js"></script>
 <style>
   body { font-family: 'Inter', sans-serif; background:#fff; color:var(--text-primary); margin:0 }
 
@@ -35,19 +36,17 @@
   .role-dropdown.open{display:block!important}
 
   /* ── Page ── */
-  .page { padding: 24px 32px 40px }
+  .page { padding: 28px 32px 72px }
+  /* Title sin container — paridad con la referencia visual */
   .page-head{
-    display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:16px;
-    padding:24px 28px; background:#fff; border:1px solid var(--border); border-radius:16px;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:20px; margin-bottom:20px;
   }
   .page-head__title h1{ font-size:22px; font-weight:700; margin:0; color:var(--text-primary) }
   .page-head__title p{ font-size:13px; color:var(--text-secondary); margin:4px 0 0 }
   .page-head__actions{ display:flex; align-items:center; gap:10px; flex-shrink:0 }
 
-  /* ── Filter toolbar (2 rows: primary + active chips) ── */
-  /* Filter toolbar: ahora vive dentro del .map-canvas como primer bloque, sin
-     fondo/borde propios. Mantiene el stacking context alto para que los menús
-     de los dropdowns se muestren sobre el mapa. */
+  /* ── Filter toolbar — integrado dentro del .map-canvas (paridad referencia) ── */
   .filter-toolbar{
     position:relative; z-index:500;
     display:flex; flex-direction:column; gap:10px;
@@ -60,10 +59,14 @@
   .filter-row--chips{ gap:8px }
   .filter-row--chips[hidden]{ display:none }
 
-  /* Search box — usa .naowee-searchbox del DS; solo fijamos el ancho dentro
-     del filter-row y el toque extra para item focus por teclado + el badge
-     de "kind" y el sub-texto que no existen como clases del DS. */
-  .filter-search{ flex:1 1 240px; min-width:200px; max-width:340px }
+  /* Search box — usa .naowee-searchbox del DS pero con border-radius pill
+     (paridad referencia visual). El --squared del DS aplica radius 12px;
+     aquí lo subimos a 9999px para forma de pill rounded. */
+  .filter-search{ flex:1 1 280px; min-width:240px; max-width:380px }
+  .filter-search .naowee-searchbox__input-wrap{
+    border-radius:9999px !important;
+    padding:6px 16px !important;
+  }
   /* Override del hover del DS: el gris por defecto resultó muy oscuro en este
      contexto. Usamos un tono crema consistente con los otros dropdowns del mapa. */
   .filter-search .naowee-searchbox__item:hover,
@@ -126,23 +129,30 @@
   .filter-chip.active{
     background:#FFEDC7; border-color:var(--accent); color:var(--accent);
   }
+  /* Filter dropdowns — width fit-content del label (paridad referencia)
+     border-radius del DS: --naowee-border-radius-actions-inputs-default (12px) */
   .filter-dd{
-    position:relative; min-width:200px;
+    position:relative;
+    /* Sin min-width: el ancho lo da el label + padding + chevron */
   }
   .filter-dd__trigger{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    height:38px; padding:0 12px; width:100%;
-    background:#fff; border:1px solid var(--border-dark,#d0d4e6); border-radius:8px;
+    display:inline-flex; align-items:center; gap:10px;
+    height:40px; padding:0 14px;
+    background:#fff; border:1px solid var(--border-dark,#d0d4e6);
+    border-radius:var(--naowee-border-radius-actions-inputs-default,12px);
     font-size:13px; font-weight:500; color:var(--text-primary);
     cursor:pointer; transition:border-color .15s, box-shadow .15s;
+    white-space:nowrap;
   }
   .filter-dd.open .filter-dd__trigger{
     border-color:var(--accent); box-shadow:0 0 0 3px rgba(215,64,9,.12);
   }
   .filter-dd__trigger svg{ width:14px; height:14px; color:var(--text-secondary); transition:transform .2s }
   .filter-dd.open .filter-dd__trigger svg{ transform:rotate(180deg) }
+  /* Menu width = longest option (max-content) — independiente del trigger */
   .filter-dd__menu{
-    position:absolute; top:calc(100% + 6px); left:0; right:0;
+    position:absolute; top:calc(100% + 6px); left:0;
+    width:max-content;
     max-height:0; opacity:0; overflow:hidden;
     background:#fff; border:1px solid var(--border); border-radius:10px;
     box-shadow:0 8px 24px rgba(0,0,0,.12);
@@ -183,7 +193,7 @@
   .filter-reset:disabled{ color:var(--text-secondary); cursor:default }
   .filter-reset:disabled:hover{ background:none }
 
-  /* ── Canvas: container unificado (filtros + mapa + side panel) ── */
+  /* ── Canvas: contiene SOLO mapa + side panel (filtros viven aparte) ── */
   .map-canvas{
     display:flex; flex-direction:column;
     padding:20px 24px 24px;
@@ -1047,7 +1057,7 @@
           <div class="ava-dot"></div>
         </div>
         <div class="user-info">
-          <span class="user-name">Juan Hernandez</span>
+          <span class="user-name">Juan Hernández</span>
           <span class="user-role">Gestor de escen...</span>
         </div>
         <button class="user-chip__chevron" type="button" aria-label="Cambiar rol" onclick="const w=this.closest('#userChipWrap');w.querySelector('.role-dropdown').classList.toggle('open');w.classList.toggle('is-open')">
@@ -1232,6 +1242,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
 <script>
 (function(){
   'use strict';
@@ -1974,17 +1986,20 @@
   // Seed determinística por ciudad+filtros → mismos escenarios al re-entrar.
   function synthesizeEscenarios(city, count){
     const tipoIdsSorted = [...state.tipoIds].sort().join(',');
+    // Seed NO incluye state.estados — la consistencia entre filtros (ej. CAR
+    // y CAR+Regular) requiere que los mismos escenarios sintéticos existan;
+    // el estado se elige de forma estable por índice, y el filtro de estado
+    // se aplica POST-síntesis abajo.
     const seedStr = city.depto + '|' + city.name + '|' + tipoIdsSorted
-      + '|' + (state.carOnly ? '1' : '0') + '|' + [...state.estados].sort().join(',');
+      + '|' + (state.carOnly ? '1' : '0');
     const rng = prng(hashStr(seedStr));
     const activeTipoKeys = state.tipoIds.size > 0
       ? [...state.tipoIds]
           .map(id => (TIPOS.find(t => t.id === id) || {}).key)
           .filter(Boolean)
       : null;
-    const estadoChoices = state.estados.size > 0
-      ? [...state.estados]
-      : ESTADOS_CONSERVACION.slice();
+    // Estado siempre elegido del catálogo completo (post-filtro luego)
+    const estadoChoices = ESTADOS_CONSERVACION.slice();
     const carTipos = ['Villa Olímpica','Coliseo','Piscina','Pista atlética','Velódromo','Complejo deportivo'];
     const out = [];
     for (let i = 0; i < count; i++){
@@ -2097,28 +2112,42 @@
 
     if (nav.level === 'depto'){
       const cities = CITIES.filter(c => c.depto === nav.depto);
+      // El agregado del depto es la fuente de verdad (paridad con el ranking)
+      // Distribuimos el agregado proporcionalmente entre las ciudades por su weight.
+      const aggregate = valueFor(nav.depto);
+      const totalWeight = cities.reduce((s,c) => s + (c.weight || 0), 0) || 1;
       let totalSampledPins = 0;
-      cities.forEach(city => {
+      // Acumulador para el residuo: forzamos que la suma de city counts == aggregate
+      let assigned = 0;
+      cities.forEach((city, i) => {
         const escs = ESCENARIOS.filter(e => e.cityName === city.name && matchEscFilters(e));
-        if (escs.length === 0) return;
+        // Conteo agregado proporcional (no el sample)
+        let cityCount;
+        if (i === cities.length - 1){
+          cityCount = Math.max(0, aggregate - assigned); // último toma el residuo
+        } else {
+          cityCount = Math.round(aggregate * ((city.weight || 0) / totalWeight));
+          assigned += cityCount;
+        }
+        if (cityCount === 0 && escs.length === 0) return;
         totalSampledPins += escs.length;
-        const hasCar = escs.some(e => e.car);
+        const hasCar = escs.some(e => e.car) || (DEPTO_DATA[nav.depto]?.car > 0 && city.weight >= 0.5);
         const isZoomed = (nav.zoomedCity === city.name);
         const svg = projectCityPin(city);
         const pos = pinPixel(svg.x, svg.y);
 
-        const pin = buildCityClusterPin(city, escs, hasCar, isZoomed);
+        // Fabricamos un array sintético con cityCount items para mantener el
+        // contrato visual del pin (label, color por tipo dominante del sample).
+        const synthEscs = cityCount > 0 ? new Array(cityCount).fill(escs[0] || {tipo:null}) : escs;
+        const pin = buildCityClusterPin(city, synthEscs, hasCar, isZoomed);
         pin.style.left = pos.x + 'px';
         pin.style.top = pos.y + 'px';
         pin.addEventListener('click', (e) => { e.stopPropagation(); tryEnterCity(city) });
         layer.appendChild(pin);
       });
 
-      // Fallback: el agregado dice que hay escenarios pero la muestra de 200 no
-      // cubre este combo de filtros. Mostramos un pin en el centroide del depto
-      // que al hacer click lleva al dashboard filtrado (drill-down real).
-      const aggregate = valueFor(nav.depto);
-      if (totalSampledPins === 0 && aggregate > 0){
+      // Fallback (legacy): si la muestra no cubre el depto y agregado=0
+      if (totalSampledPins === 0 && aggregate === 0 && false){
         const centroid = DEPTO_CENTROID[nav.depto];
         if (centroid){
           const pos = pinPixel(centroid.x, centroid.y);
@@ -2858,8 +2887,17 @@
     // depto dice que hay escenarios, sintetizamos un grupo representativo para
     // que el usuario pueda ver pines e interactuar (demo-continuidad).
     if (escs.length === 0){
-      const agg = valueFor(city.depto);
-      if (agg > 0) escs = synthesizeEscenarios(city, Math.min(6, Math.max(2, Math.round(agg / 8))));
+      // Para que la lista sea estable entre filtros, sintetizamos un grupo
+      // basado en el agregado del depto SIN estado (depto.car ó depto.total)
+      // y luego aplicamos el filtro de estado post-síntesis. Así, un escenario
+      // CAR + Regular sigue siendo "el mismo" entre los filtros CAR y CAR+Regular.
+      const dData = DEPTO_DATA[city.depto] || {};
+      const baseAgg = state.carOnly ? (dData.car || 0) : (dData.total || 0);
+      if (baseAgg > 0) {
+        escs = synthesizeEscenarios(city, Math.min(6, Math.max(2, Math.round(baseAgg / 8))));
+        // Aplicamos los filtros activos (incluido estado) sobre el set sintetizado
+        if (state.estados.size > 0) escs = escs.filter(e => state.estados.has(e.estado));
+      }
     }
     if (escs.length === 0) return;
     escs.forEach(e => leafletEscIndex.set(String(e.id), e));
@@ -2956,12 +2994,15 @@
     const prev = root.querySelectorAll('.rank-row, .rank-empty');
     prev.forEach(n => n.remove());
 
+    // Cuando filtras por región, mostramos TODOS los deptos de esa región (~11 max)
+    // para que el listado sea exhaustivo. Sin región seleccionada, top 10 nacional.
+    const cap = state.region === 'Todas' ? 10 : Infinity;
     const list = Object.keys(DEPTO_DATA)
       .filter(passesRegion)
       .map(name => ({ name, count: valueFor(name), car: DEPTO_DATA[name].car }))
       .filter(d => d.count > 0)
       .sort((a,b) => b.count - a.count)
-      .slice(0, 10);
+      .slice(0, cap);
 
     const legendNode = root.querySelector('.legend-card');
 
