@@ -7,8 +7,9 @@ Sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 
 ## [v2.0.0] — 2026-05-04
 
-Refinamiento end-to-end: paridad visual con `naowee-test-sidebar-shell`,
-fixes de feedback del cliente y nuevas variables del censo SUID.
+Major bump desde **v1.3.2**. Refinamiento end-to-end: paridad visual con
+`naowee-test-sidebar-shell`, fixes de feedback del cliente y nuevas
+variables del censo SUID.
 
 ### Added — UI / Estilos
 - **Sidebar refinado** con easing Apple-style, fade escalonado de labels,
@@ -114,11 +115,11 @@ fixes de feedback del cliente y nuevas variables del censo SUID.
 
 ---
 
-## [v1.0.0] — 2026-04-15 · Baseline
+## [v1.3.2] — Pre-sesión
 
-Versión publicada antes de la sesión de refinamiento del 4-May-2026.
-Corresponde al commit `4b54763` (`chore: actualizar referencias de org
-a naowee-tech`).
+Última release antes de la sesión de refinamiento del 4-May-2026.
+Corresponde al commit `f44d95f` (`fix(esc-12): rechazo doc sin motivo stale +
+handlers zoom/descarga operativos`).
 
 ### Pantallas incluidas en la baseline
 - `index.html` — landing con accesos por rol.
@@ -149,3 +150,9 @@ a naowee-tech`).
 - Segment del horario sin sliding pill.
 - Filtros del mapa con discrepancias entre rank y pins.
 - Sin persistencia del estado del sidebar entre páginas.
+
+---
+
+## [v1.0.0..v1.3.1] — Histórico previo
+
+Releases anteriores del demo. Ver tags y commits en GitHub para el detalle.
