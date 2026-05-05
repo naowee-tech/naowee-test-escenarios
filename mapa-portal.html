@@ -1,0 +1,3684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID — Mapa de Escenarios · Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/shell.css"/>
+<link rel="stylesheet" href="shared/transitions.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+<!-- Portal-only overrides: este HTML está pensado para ser embebido como
+     iframe desde otros repos (ej. naowee-test-sidebar-shell). Sin shell ni
+     header — el contenido renderiza directo en el body. -->
+<style>
+  html, body { background: transparent !important; height: 100%; margin: 0; }
+  body { overflow-x: hidden; }
+  body > .naowee-floating-footer { display: none !important; }
+  /* La .page del esc-13 originalmente vivía dentro de .main que era flex
+     y le daba el min-height; ahora la .page es child directo del body. */
+  body > .page { min-height: 100vh; }
+</style>
+<style>
+  body { font-family: 'Inter', sans-serif; background:#fff; color:var(--text-primary); margin:0 }
+
+  /* ── Sidebar logo overrides (mismo patrón que esc-08/10) ── */
+  .sidebar-logo .sb-logo-img{height:40px;width:auto;display:block;flex-shrink:0}
+  .sidebar-logo .logo-sep{width:1px;height:36px;background:var(--border);flex-shrink:0}
+  .sidebar.collapsed .sb-logo-img,.sidebar.collapsed .sidebar-logo .logo-sep{display:none}
+  .sidebar.collapsed .sidebar-logo{justify-content:center}
+  .sidebar.collapsed .nav-row{padding:0}
+  .sidebar.collapsed .nav-row .active-bar{display:none}
+
+  /* ── User-chip overrides ── */
+  .user-chip{padding:8px 16px 8px 8px;max-width:220px;gap:10px}
+  .user-chip .ava-ring{width:40px;height:40px;background:#FF7500;color:#fff;font-size:13px;font-weight:700}
+  .user-chip__chevron svg{transition:transform .2s ease}
+  .user-chip.is-open .user-chip__chevron svg{transform:rotate(180deg)}
+  .user-chip .user-name{font-size:14px;font-weight:600;color:var(--text-primary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .user-chip .user-role{font-size:12px;color:var(--text-secondary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .user-chip__chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:transparent;border:none;cursor:pointer;color:var(--text-secondary);flex-shrink:0;margin-left:4px;transition:background .15s,color .15s}
+  .user-chip__chevron:hover{background:#FFEDC7;color:var(--accent)}
+  .user-chip__chevron svg{width:14px;height:14px}
+  .role-dropdown.open{display:block!important}
+
+  /* ── Page ── */
+  .page { padding: 28px 32px 72px }
+  /* Title sin container — paridad con la referencia visual */
+  .page-head{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:20px; margin-bottom:20px;
+  }
+  .page-head__title h1{ font-size:22px; font-weight:700; margin:0; color:var(--text-primary) }
+  .page-head__title p{ font-size:13px; color:var(--text-secondary); margin:4px 0 0 }
+  .page-head__actions{ display:flex; align-items:center; gap:10px; flex-shrink:0 }
+
+  /* ── Filter toolbar — integrado dentro del .map-canvas (paridad referencia) ── */
+  .filter-toolbar{
+    position:relative; z-index:500;
+    display:flex; flex-direction:column; gap:10px;
+    padding-bottom:18px;
+    margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+  .filter-row{ display:flex; align-items:center; flex-wrap:wrap; gap:10px }
+  .filter-row--primary{ gap:10px }
+  .filter-row--chips{ gap:8px }
+  .filter-row--chips[hidden]{ display:none }
+
+  /* Search box — usa .naowee-searchbox del DS pero con border-radius pill
+     (paridad referencia visual). El --squared del DS aplica radius 12px;
+     aquí lo subimos a 9999px para forma de pill rounded. */
+  .filter-search{ flex:1 1 280px; min-width:240px; max-width:380px }
+  .filter-search .naowee-searchbox__input-wrap{
+    border-radius:9999px !important;
+    padding:6px 16px !important;
+  }
+  /* Override del hover del DS: el gris por defecto resultó muy oscuro en este
+     contexto. Usamos un tono crema consistente con los otros dropdowns del mapa. */
+  .filter-search .naowee-searchbox__item:hover,
+  .filter-search .naowee-searchbox__item.is-focused{
+    background:#FFEDC7; color:var(--accent);
+  }
+  .filter-search .naowee-searchbox__item:hover .naowee-searchbox__item__sub,
+  .filter-search .naowee-searchbox__item.is-focused .naowee-searchbox__item__sub{
+    color:var(--accent); opacity:.75;
+  }
+  .filter-search .naowee-searchbox__item:hover .naowee-searchbox__item__name,
+  .filter-search .naowee-searchbox__item.is-focused .naowee-searchbox__item__name{
+    color:var(--accent); font-weight:600;
+  }
+  .naowee-searchbox__item__kind{
+    font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--text-secondary); flex-shrink:0;
+    padding:2px 6px; border-radius:4px; background:#f0f1f7;
+  }
+  .naowee-searchbox__item__name{ font-size:13px; color:var(--text-primary); font-weight:500 }
+  .naowee-searchbox__item__sub{ font-size:11px; color:var(--text-secondary); margin-left:auto }
+  .naowee-searchbox__empty{
+    padding:14px; font-size:12px; color:var(--text-secondary); text-align:center;
+  }
+
+  /* Active filter chips — usan .naowee-tag del DS; solo agregamos el dot de color
+     y una animación sutil de entrada. */
+  .active-chip{ animation:chipIn .18s cubic-bezier(.4,0,.2,1) }
+  @keyframes chipIn{ from{ opacity:0; transform:translateY(-4px) } to{ opacity:1; transform:none } }
+  .active-chip__dot{
+    width:8px; height:8px; border-radius:50%; flex-shrink:0; display:block;
+    box-shadow:0 0 0 1.5px #fff;
+  }
+  .active-chip .naowee-tag__active-area:hover .naowee-tag__close{
+    color:var(--accent);
+  }
+
+  /* Legacy alias */
+  .filter-bar{
+    position:relative; z-index:500;
+    display:flex; align-items:center; flex-wrap:wrap; gap:16px 24px;
+    padding:16px 20px; margin-bottom:16px;
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+  }
+  .filter-group{ display:flex; align-items:center; gap:10px; min-width:0 }
+  .filter-label{
+    font-size:11px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.6px; text-transform:uppercase; white-space:nowrap;
+  }
+  .filter-chips{ display:flex; gap:6px; flex-wrap:wrap }
+  .filter-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    height:32px; padding:0 12px;
+    background:#fff; border:1.5px solid var(--border); border-radius:9999px;
+    font-size:12px; font-weight:600; color:var(--text-secondary);
+    cursor:pointer; user-select:none;
+    transition:all .15s ease;
+  }
+  .filter-chip:hover{ border-color:var(--border-dark); color:var(--text-primary) }
+  .filter-chip.active{
+    background:#FFEDC7; border-color:var(--accent); color:var(--accent);
+  }
+  /* Filter dropdowns — width fit-content del label (paridad referencia)
+     border-radius del DS: --naowee-border-radius-actions-inputs-default (12px) */
+  .filter-dd{
+    position:relative;
+    /* Sin min-width: el ancho lo da el label + padding + chevron */
+  }
+  .filter-dd__trigger{
+    display:inline-flex; align-items:center; gap:10px;
+    height:40px; padding:0 14px;
+    background:#fff; border:1px solid var(--border-dark,#d0d4e6);
+    border-radius:var(--naowee-border-radius-actions-inputs-default,12px);
+    font-size:13px; font-weight:500; color:var(--text-primary);
+    cursor:pointer; transition:border-color .15s, box-shadow .15s;
+    white-space:nowrap;
+  }
+  .filter-dd.open .filter-dd__trigger{
+    border-color:var(--accent); box-shadow:0 0 0 3px rgba(215,64,9,.12);
+  }
+  .filter-dd__trigger svg{ width:14px; height:14px; color:var(--text-secondary); transition:transform .2s }
+  .filter-dd.open .filter-dd__trigger svg{ transform:rotate(180deg) }
+  /* Menu width = longest option (max-content) — independiente del trigger */
+  .filter-dd__menu{
+    position:absolute; top:calc(100% + 6px); left:0;
+    width:max-content;
+    max-height:0; opacity:0; overflow:hidden;
+    background:#fff; border:1px solid var(--border); border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);
+    transition:max-height .2s ease, opacity .2s ease;
+    z-index:600;
+  }
+  .filter-dd.open .filter-dd__menu{ max-height:340px; opacity:1; overflow-y:auto }
+  .filter-dd__opt{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 12px; font-size:13px; color:var(--text-primary);
+    cursor:pointer; transition:background .12s;
+  }
+  .filter-dd__opt:hover{ background:#f8f8fb }
+  .filter-dd__opt.selected{ background:#FFEDC7; color:var(--accent); font-weight:600 }
+  .filter-dd__opt-icon{ font-size:15px; width:18px; text-align:center }
+  /* Multi-select variant: checkbox + color swatch */
+  .filter-dd__opt--multi{ gap:10px }
+  .filter-dd__check{
+    width:16px; height:16px; border:1.5px solid var(--border-dark); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    background:#fff; transition:background .12s, border-color .12s;
+  }
+  .filter-dd__opt--multi.selected .filter-dd__check{
+    background:var(--accent); border-color:var(--accent);
+  }
+  .filter-dd__check svg{ width:12px; height:12px; color:#fff; opacity:0 }
+  .filter-dd__opt--multi.selected .filter-dd__check svg{ opacity:1 }
+  .filter-dd__dot{
+    width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    box-shadow:0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,.08);
+  }
+  .filter-reset{
+    margin-left:auto; font-size:12px; font-weight:600; color:var(--accent);
+    background:none; border:none; cursor:pointer; padding:6px 10px; border-radius:6px;
+    transition:background .12s;
+  }
+  .filter-reset:hover{ background:#FFEDC7 }
+  .filter-reset:disabled{ color:var(--text-secondary); cursor:default }
+  .filter-reset:disabled:hover{ background:none }
+
+  /* ── Canvas: contiene SOLO mapa + side panel (filtros viven aparte) ── */
+  .map-canvas{
+    display:flex; flex-direction:column;
+    padding:20px 24px 24px;
+    background:#fff; border:1px solid var(--border); border-radius:16px;
+  }
+  .map-body{
+    display:grid; grid-template-columns: 1fr 480px; gap:24px;
+  }
+
+  /* ── Skeleton loader (mientras carga el SVG del mapa) ── */
+  .skeleton{
+    background:linear-gradient(90deg, #f1f2f7 0%, #e4e7ef 50%, #f1f2f7 100%);
+    background-size:200% 100%;
+    animation: skelShimmer 1.4s linear infinite;
+    border-radius:8px;
+  }
+  @keyframes skelShimmer{
+    0%   { background-position: 200% 0 }
+    100% { background-position: -200% 0 }
+  }
+  .map-skeleton{
+    position:absolute; inset:0; z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    background:#fff;
+    transition: opacity .35s ease;
+  }
+  .map-skeleton[hidden]{ display:none }
+  .map-skeleton.is-fading{ opacity:0; pointer-events:none }
+  .map-skeleton__shape{
+    /* Silhueta orgánica que evoca la forma alargada de Colombia */
+    width:52%; height:72%;
+    border-radius:42% 58% 50% 50% / 35% 40% 60% 65%;
+    transform:rotate(-4deg);
+  }
+  .map-skeleton__hint{
+    position:absolute; bottom:32px; left:50%;
+    transform:translateX(-50%);
+    font-size:12px; color:var(--text-secondary);
+    letter-spacing:.3px;
+  }
+
+  /* ── Breadcrumb (usa .naowee-breadcrumb del DS) ── */
+  .map-breadcrumb{
+    margin-bottom:14px; min-height:28px;
+    gap:6px;
+  }
+  .map-breadcrumb .naowee-breadcrumb__sep{
+    display:inline-flex; align-items:center; flex-shrink:0;
+    color:var(--text-secondary);
+  }
+  .map-breadcrumb .naowee-breadcrumb__sep svg{
+    width:16px; height:16px; display:block;
+    stroke:currentColor; fill:none;
+  }
+  .map-breadcrumb .naowee-breadcrumb__sep svg path{
+    stroke:currentColor; fill:none;
+  }
+
+  /* ── Map stage (container for SVG + Leaflet layers) ── */
+  .map-stage{
+    position:relative; width:100%;
+    min-height:640px; max-height:760px; height:640px;
+    overflow:hidden;
+    border-radius:12px;
+    background:#f8f9fc;
+  }
+
+  .map-layer{
+    position:absolute; inset:0;
+    transition:opacity .35s ease;
+  }
+  .map-layer--hidden{ opacity:0; pointer-events:none }
+
+  /* ── SVG layer (levels 1 + 2) ── */
+  /* viewBox animado en vez de transform scale → vector puro, sin pixelado */
+  .map-svg-area{
+    position:absolute; inset:0;
+    overflow:hidden;
+  }
+  #mapContainer{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+  }
+  #mapContainer svg{
+    width:100%; height:100%; display:block; user-select:none;
+    shape-rendering:geometricPrecision;
+  }
+
+  /* ── Pin layer (absolute over svg) ── */
+  .pin-layer{
+    position:absolute; inset:0;
+    pointer-events:none;
+  }
+
+  /* ── Cluster pin ── */
+  .cluster-pin{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+    min-width:46px; min-height:46px; padding:6px 12px;
+    background:#fff; border:2px solid var(--accent);
+    border-radius:9999px;
+    box-shadow:0 4px 14px rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.12);
+    font-family:'Inter', sans-serif;
+    color:var(--accent);
+    cursor:pointer; pointer-events:auto;
+    transition:transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s;
+    z-index:10;
+    animation:pinPop .35s cubic-bezier(.4,0,.2,1) both;
+  }
+  .cluster-pin:hover{
+    transform:translate(-50%,-50%) scale(1.08);
+    box-shadow:0 6px 20px rgba(0,0,0,.24), 0 2px 6px rgba(0,0,0,.15);
+    z-index:20;
+  }
+  .cluster-pin__count{ font-size:14px; font-weight:800; line-height:1 }
+  .cluster-pin__label{
+    font-size:10px; font-weight:600; color:var(--text-secondary);
+    margin-top:2px; white-space:nowrap; line-height:1;
+  }
+  .cluster-pin--car::after{
+    content:'★';
+    position:absolute; top:-6px; right:-6px;
+    width:18px; height:18px;
+    background:#ffbf00; color:#fff;
+    border-radius:9999px; border:2px solid #fff;
+    font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  .cluster-pin--large{
+    min-width:54px; min-height:54px;
+    background:linear-gradient(180deg, #fff 0%, #fff5ed 100%);
+  }
+  .cluster-pin--muted{
+    border-color:#d0d4e6; color:var(--text-secondary);
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    opacity:.6;
+  }
+  /* Pin agregado (cuando la muestra no cubre el combo de filtros) */
+  .cluster-pin--aggregate{
+    border-style:dashed; border-color:var(--accent);
+    background:linear-gradient(180deg, #fff 0%, #fff5ed 100%);
+  }
+  .cluster-pin--aggregate .cluster-pin__count{ color:var(--accent) }
+  .cluster-pin--aggregate::before{
+    content:""; position:absolute; top:-4px; right:-4px;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 2px #fff;
+  }
+  /* Cluster con sub-zoom activo: pulse que invita al 2° click (abrir Leaflet) */
+  .cluster-pin--zoomed{
+    border-color:var(--accent);
+    box-shadow:0 0 0 0 rgba(215,64,9,.6), 0 4px 14px rgba(0,0,0,.22), 0 2px 4px rgba(0,0,0,.12);
+    animation:pinPulse 1.6s ease-in-out infinite;
+    z-index:30;
+  }
+  .cluster-pin--zoomed .cluster-pin__count,
+  .cluster-pin--zoomed .cluster-pin__label{ color:var(--accent) }
+  @keyframes pinPulse{
+    0%  { box-shadow:0 0 0 0 rgba(215,64,9,.55), 0 4px 14px rgba(0,0,0,.22) }
+    50% { box-shadow:0 0 0 12px rgba(215,64,9,0),  0 4px 14px rgba(0,0,0,.22) }
+    100%{ box-shadow:0 0 0 0 rgba(215,64,9,0),    0 4px 14px rgba(0,0,0,.22) }
+  }
+
+  @keyframes pinPop {
+    0% { transform:translate(-50%,-50%) scale(0); opacity:0 }
+    60%{ transform:translate(-50%,-50%) scale(1.12); opacity:1 }
+    100%{ transform:translate(-50%,-50%) scale(1); opacity:1 }
+  }
+
+  /* ── Cluster pin de ciudad: pill horizontal + color del tipo dominante ── */
+  .cluster-pin.cluster-pin--combo{
+    flex-direction:row; gap:0;
+    min-width:auto; min-height:40px;
+    padding:6px 14px; border-radius:9999px;
+    border-color:var(--tipo-color, var(--accent));
+  }
+  .cluster-pin--combo .cluster-pin__count{
+    color:var(--tipo-color, var(--accent));
+    font-size:15px; line-height:1; padding-right:10px;
+  }
+  .cluster-pin--combo .cluster-pin__sep{
+    width:1px; height:18px; background:rgba(0,0,0,.08);
+    margin-right:10px;
+  }
+  .cluster-pin--combo .cluster-pin__label{
+    font-size:13px; font-weight:600; color:var(--text-primary);
+    margin:0; line-height:1;
+  }
+  .cluster-pin--combo .cluster-pin__tipo-icon{
+    margin-left:8px; display:inline-flex; align-items:center;
+    color:var(--tipo-color);
+  }
+  .cluster-pin--combo .cluster-pin__tipo-icon svg{
+    width:14px; height:14px; display:block;
+  }
+  /* Anchor dot bajo la burbuja, del color del tipo dominante */
+  .cluster-pin--combo::after{
+    content:''; position:absolute;
+    bottom:-5px; left:50%;
+    width:8px; height:8px;
+    background:var(--tipo-color, var(--accent));
+    border:2px solid #fff;
+    border-radius:9999px;
+    transform:translateX(-50%);
+  }
+
+  /* ── Leaflet layer (level 3) ── */
+  .map-leaflet-area{
+    position:absolute; inset:0;
+    border-radius:12px; overflow:hidden;
+  }
+  #leafletMap{ width:100%; height:100%; background:#eef1f7 }
+  .leaflet-container{ font-family:'Inter', sans-serif !important }
+  .leaflet-popup-content-wrapper{ border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.18) }
+  .leaflet-popup-content{ font-size:12px; color:var(--text-primary); margin:10px 14px; line-height:1.4 }
+  .leaflet-popup-content strong{ color:var(--text-primary); font-size:13px }
+
+  /* ── Pin individual (Leaflet) — todos fill completo con color del tipo ── */
+  .leaflet-esc-pin-wrap{ background:transparent !important; border:none !important; overflow:visible !important }
+  .esc-pin{
+    width:40px; height:54px; position:relative;
+    --pin-color:#d74009;
+  }
+  .esc-pin__body{
+    position:absolute; top:0; left:2px;
+    width:36px; height:36px;
+    background:var(--pin-color);
+    color:#fff;
+    border-radius:9999px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 10px rgba(0,0,0,.26), 0 1px 2px rgba(0,0,0,.12);
+    transition:transform .15s cubic-bezier(.4,0,.2,1);
+    z-index:2;
+  }
+  .esc-pin__body svg{ width:18px; height:18px; display:block }
+  /* Cola como SVG dedicado, sin stroke */
+  .esc-pin__tail{
+    position:absolute; left:50%; top:30px;
+    transform:translateX(-50%);
+    width:14px; height:14px;
+    z-index:1;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.22));
+  }
+  .esc-pin__tail path{ fill:var(--pin-color); stroke:none }
+  .esc-pin:hover .esc-pin__body{ transform:scale(1.1) }
+  .esc-pin__star{
+    position:absolute; top:-4px; right:-2px;
+    width:18px; height:18px;
+    background:#ffbf00; color:#fff;
+    border-radius:9999px; border:2px solid #fff;
+    font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    z-index:3;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+
+  /* ── Tipo swatch (dropdown + tooltip) ── */
+  .tipo-swatch{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; flex-shrink:0;
+    border-radius:6px;
+    color:#fff;
+  }
+  .tipo-swatch svg{ width:14px; height:14px }
+  .tipo-swatch--all{
+    background:#f3f4f6; color:var(--text-secondary);
+  }
+  .map-tooltip__tipo-swatch{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; flex-shrink:0;
+    border-radius:5px;
+    color:#fff;
+  }
+  .map-tooltip__tipo-swatch svg{ width:11px; height:11px }
+
+  /* ── Escenario popover (inside Leaflet popup) ── */
+  .esc-popup-wrap .leaflet-popup-content-wrapper{
+    padding:0; overflow:hidden;
+    border-radius:14px !important;
+    box-shadow:0 12px 40px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08) !important;
+    background:#fff;
+  }
+  .esc-popup-wrap .leaflet-popup-content{
+    margin:0 !important; width:auto !important; min-width:280px; line-height:1.4;
+  }
+  .esc-popup-wrap .leaflet-popup-tip{ box-shadow:0 2px 6px rgba(0,0,0,.12) }
+  /* Ocultamos el close nativo de Leaflet; usamos .naowee-modal__dismiss del DS */
+  .esc-popup-wrap .leaflet-popup-close-button{ display:none !important }
+
+  .esc-popover{
+    font-family:'Inter', sans-serif;
+    color:var(--text-primary);
+    position:relative;
+  }
+  .esc-popover .naowee-modal__dismiss{
+    position:absolute; top:10px; right:10px; z-index:2;
+  }
+  .esc-popover__head{
+    display:flex; align-items:flex-start; gap:12px;
+    padding:14px 52px 12px 14px; border-bottom:1px solid var(--border);
+  }
+  .esc-popover__ico{
+    display:flex; align-items:center; justify-content:center;
+    width:42px; height:42px; flex-shrink:0;
+    border-radius:10px;
+    color:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.12);
+  }
+  .esc-popover__ico svg{ width:22px; height:22px }
+  .esc-popover__titles{ flex:1; min-width:0 }
+  .esc-popover__name{
+    font-size:14px; font-weight:700; color:var(--text-primary);
+    margin:0 0 4px; line-height:1.25;
+    overflow-wrap:anywhere;
+  }
+  .esc-popover__sub{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    font-size:12px;
+  }
+  .esc-popover__tipo{ font-weight:600 }
+  .esc-popover__car{
+    display:inline-flex; align-items:center; gap:3px;
+    font-size:10px; font-weight:700;
+    background:#fef3c7; color:#a16207;
+    padding:2px 8px; border-radius:9999px;
+    border:1px solid #fcd34d;
+  }
+  .esc-popover__grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;
+    padding:14px;
+  }
+  .esc-popover__cell{ display:flex; flex-direction:column; gap:3px; min-width:0 }
+  .esc-popover__k{
+    font-size:10px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.5px; text-transform:uppercase;
+  }
+  .esc-popover__v{
+    font-size:13px; font-weight:600; color:var(--text-primary);
+    display:flex; align-items:center; gap:6px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .esc-popover__dot{
+    width:7px; height:7px; border-radius:9999px; flex-shrink:0;
+  }
+  .esc-popover__footer{
+    padding:10px 14px 12px;
+    background:#fafafb; border-top:1px solid var(--border);
+    display:flex; justify-content:flex-end;
+  }
+  .esc-popover__footer .naowee-btn{ width:100% }
+
+  /* ── Zoom controls (+ / −) estilo mapa ── */
+  .zoom-controls{
+    position:absolute; top:14px; left:14px; z-index:100;
+    display:flex; flex-direction:column;
+    background:#fff; border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+    overflow:hidden;
+  }
+  .zoom-controls[hidden]{ display:none }
+  .zoom-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    background:transparent; border:none;
+    color:var(--text-primary);
+    cursor:pointer;
+    transition:background .12s, color .12s;
+    padding:0;
+  }
+  .zoom-btn + .zoom-btn{ border-top:1px solid var(--border) }
+  .zoom-btn svg{ width:16px; height:16px }
+  .zoom-btn:hover{ background:#f5f6fa }
+  .zoom-btn:disabled{ color:#cdd1e0; cursor:default }
+  .zoom-btn:disabled:hover{ background:transparent }
+
+  /* ── Ranking sidebar (top 10 deptos) ── */
+  .rank-card{ display:flex; flex-direction:column; gap:10px; padding-top:4px }
+  .rank-card[hidden]{ display:none }
+  .rank-title{
+    font-size:11px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.8px; text-transform:uppercase;
+    padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:4px;
+  }
+  .rank-row{
+    display:grid; grid-template-columns: 20px 1fr auto; gap:10px; align-items:center;
+    padding:4px 6px; margin:0 -6px; border-radius:8px;
+    cursor:pointer; transition:background .12s;
+  }
+  .rank-row:hover{ background:#f8f8fb }
+  .rank-idx{ font-size:11px; font-weight:700; color:var(--text-secondary); text-align:right }
+  .rank-body{ display:flex; flex-direction:column; gap:4px; min-width:0 }
+  .rank-name-line{ display:flex; align-items:center; gap:6px; min-width:0 }
+  .rank-name{ font-size:13px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .rank-car-dot{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:9999px;
+    background:#fef3c7; color:#a16207;
+    font-size:10px; font-weight:700; flex-shrink:0;
+    border:1px solid #fcd34d;
+  }
+  .rank-bar{ height:3px; background:#f3f4f6; border-radius:3px; overflow:hidden }
+  .rank-bar__fill{
+    height:100%; background:#475569; border-radius:3px;
+    width:0;
+    animation: rankBarGrow .7s cubic-bezier(.25,.1,.25,1) var(--bar-delay, 0ms) forwards;
+    transition: background .2s ease;
+  }
+  .rank-row:hover .rank-bar__fill{ background:var(--accent) }
+  @keyframes rankBarGrow {
+    from { width: 0 }
+    to   { width: var(--bar-pct, 0%) }
+  }
+  .rank-value{ font-size:12px; font-weight:600; color:var(--text-secondary); min-width:40px; text-align:right }
+  .rank-empty{ font-size:12px; color:var(--text-secondary); font-style:italic; padding:14px 0 }
+
+  /* ── Heatmap legend ── */
+  .legend-card{
+    margin-top:18px; padding:14px 0 0; border-top:1px solid var(--border);
+  }
+  .legend-title{
+    font-size:11px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.8px; text-transform:uppercase; margin-bottom:10px;
+  }
+  .legend-gradient{
+    height:10px; border-radius:9999px; margin-bottom:6px;
+    background:linear-gradient(90deg,#fee8cd 0%,#fddbb4 15%,#fcc693 30%,#faaf72 45%,#f59456 60%,#ef7a3c 80%,#d74009 100%);
+  }
+  .legend-ticks{
+    display:flex; justify-content:space-between;
+    font-size:10px; font-weight:500; color:var(--text-secondary);
+  }
+  .legend-row--car{
+    display:flex; align-items:center; gap:8px;
+    margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);
+    font-size:12px; color:var(--text-secondary);
+  }
+  .legend-car-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; border-radius:9999px;
+    background:#fef3c7; color:#a16207;
+    font-size:10px; font-weight:700; border:1px solid #fcd34d;
+  }
+  .legend-row--muted{
+    display:flex; align-items:center; gap:8px; margin-top:8px;
+    font-size:12px; color:var(--text-secondary);
+  }
+  .legend-swatch{
+    width:18px; height:10px; border-radius:4px; background:#e7e9f3;
+  }
+
+  /* ── Floating tooltip (dark card) ── */
+  .map-tooltip{
+    position:fixed; z-index:2000;
+    background:#1a2340; color:#fff;
+    border-radius:12px; padding:16px 18px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.25);
+    min-width:280px; max-width:340px;
+    pointer-events:none;
+    opacity:0; transform:translateY(-4px);
+    transition:opacity .12s ease, transform .12s ease;
+    font-family:'Inter', sans-serif;
+  }
+  .map-tooltip.visible{ opacity:1; transform:translateY(0) }
+  .map-tooltip__title{ font-size:15px; font-weight:700; color:#fff; margin:0 0 2px; display:flex; align-items:center; gap:8px }
+  .map-tooltip__region{
+    font-size:10px; font-weight:600; color:rgba(255,255,255,.55);
+    text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px;
+  }
+  .map-tooltip__big{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:10px 0 12px; border-top:1px solid rgba(255,255,255,.1);
+    margin-top:8px;
+  }
+  .map-tooltip__big-label{ font-size:12px; color:rgba(255,255,255,.72) }
+  .map-tooltip__big-value{ font-size:22px; font-weight:800; color:#fff; line-height:1 }
+  .map-tooltip__row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0; border-top:1px solid rgba(255,255,255,.1);
+    font-size:13px;
+  }
+  .map-tooltip__label{ color:rgba(255,255,255,.7); display:flex; align-items:center; gap:6px }
+  .map-tooltip__value{ color:#fff; font-weight:700 }
+  .map-tooltip__value--car{ color:#ffbf00 }
+  .map-tooltip__car-ico{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:9999px;
+    background:rgba(255,191,0,.22); color:#ffbf00;
+    font-size:10px; font-weight:700;
+  }
+  .map-tooltip__tipos-title{
+    font-size:10px; font-weight:700; color:rgba(255,255,255,.55);
+    text-transform:uppercase; letter-spacing:.6px;
+    margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.1);
+    margin-bottom:6px;
+  }
+  .map-tooltip__tipo-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:4px 0; font-size:12px;
+  }
+  .map-tooltip__tipo-label{ color:rgba(255,255,255,.82); display:flex; align-items:center; gap:6px }
+  .map-tooltip__tipo-count{ color:#fff; font-weight:600 }
+  .map-tooltip__hint{
+    font-size:11px; color:rgba(255,255,255,.55); font-style:italic;
+    margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.1);
+    display:flex; align-items:center; gap:6px;
+  }
+  .map-tooltip__hint svg{ width:12px; height:12px }
+
+  /* ── Side panel: ficha técnica del escenario ── */
+  .detail-panel{
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+    overflow:hidden; position:relative;
+    animation:panelSlideIn .3s cubic-bezier(.4,0,.2,1);
+  }
+  .detail-panel[hidden]{ display:none }
+  @keyframes panelSlideIn{
+    from{ opacity:0; transform:translateX(16px) }
+    to  { opacity:1; transform:translateX(0) }
+  }
+  .detail-panel__hero{
+    position:relative;
+    height:180px;
+    overflow:hidden;
+    background:#f3f4f8;
+  }
+  .detail-panel__hero img{
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+  /* Overlay suave para que la X siempre sea legible */
+  .detail-panel__hero::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.15) 0%, transparent 40%, rgba(0,0,0,.15) 100%);
+    pointer-events:none;
+  }
+  /* Dismiss sobre color fill del hero — fondo blanco sólido + ícono accent */
+  .detail-panel .naowee-modal__dismiss{
+    position:absolute; top:12px; right:12px; z-index:5;
+    width:32px; height:32px;
+    background:#fff;
+    color:var(--text-primary);
+    border-radius:9999px;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+    transition:background .15s, transform .15s;
+  }
+  .detail-panel .naowee-modal__dismiss:hover{
+    background:#f5f6fa; transform:scale(1.05);
+  }
+  .detail-panel .naowee-modal__dismiss svg{
+    width:16px; height:16px;
+    color:var(--text-primary);
+    stroke:currentColor;
+  }
+  .detail-panel__head{
+    padding:14px 18px 14px; border-bottom:1px solid var(--border);
+  }
+  .detail-panel__tipo-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:9999px;
+    font-size:11px; font-weight:700;
+    color:#fff;
+    margin-bottom:10px;
+  }
+  .detail-panel__tipo-badge svg{ width:12px; height:12px }
+  .detail-panel__name{
+    font-size:16px; font-weight:700; color:var(--text-primary);
+    margin:0 0 4px; line-height:1.25;
+    overflow-wrap:anywhere;
+  }
+  .detail-panel__sub{
+    font-size:12px; color:var(--text-secondary);
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  }
+  .detail-panel__car-chip{
+    display:inline-flex; align-items:center; gap:3px;
+    font-size:10px; font-weight:700;
+    color:#a16207; background:#fef3c7;
+    padding:2px 8px; border-radius:9999px;
+    border:1px solid #fcd34d;
+  }
+
+  /* Tabs DS (.naowee-tabs) con border-radius 0 y 12px de respiro contra el
+     divider superior (head del panel). Evita que el hover del tab quede pegado. */
+  .detail-panel .naowee-tabs{ border-radius:0; margin-top:12px }
+  .detail-panel .naowee-tab{ white-space:nowrap }
+
+  .detail-panel__content{
+    padding:18px 20px 22px;
+    max-height:460px; overflow-y:auto;
+  }
+
+  /* Secciones dentro del panel (replicando esc-09) */
+  .detail-section{
+    padding-bottom:18px;
+    margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+  .detail-section:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0 }
+  .detail-section__title{
+    font-size:11px; font-weight:700; letter-spacing:.5px;
+    color:#9c9ebf; text-transform:uppercase;
+    margin:0 0 14px; padding-bottom:10px;
+    border-bottom:1px solid var(--border);
+  }
+
+  /* Read-only fields (mismo componente que esc-09) */
+  .ro-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 20px }
+  .ro-field{ display:flex; flex-direction:column; gap:3px; min-width:0 }
+  .ro-field--full{ grid-column:1 / -1 }
+  .ro-field__label{
+    font-size:11px; font-weight:500; color:var(--text-secondary);
+    line-height:16px;
+  }
+  .ro-field__value{
+    font-size:13px; font-weight:500; color:var(--text-primary);
+    line-height:18px; word-break:break-word;
+    display:flex; align-items:center; gap:6px;
+    font-family:'Inter', sans-serif;
+  }
+
+  /* Galería de fotos (placeholder) */
+  .photos-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    margin-top:12px;
+  }
+  .photo-tile{
+    aspect-ratio:4/3; border-radius:8px;
+    background:linear-gradient(135deg, #f3f4f8, #e7e9f3);
+    display:flex; align-items:center; justify-content:center;
+    color:#9aa0bb;
+    border:1px solid var(--border);
+  }
+  .photo-tile svg{ width:28px; height:28px }
+
+  /* Historial timeline */
+  .timeline{ display:flex; flex-direction:column; gap:0 }
+  .timeline-item{
+    display:flex; gap:12px; align-items:flex-start;
+    padding-bottom:16px;
+    position:relative;
+  }
+  .timeline-item:last-child{ padding-bottom:0 }
+  .timeline-item:not(:last-child)::before{
+    content:''; position:absolute; left:8px; top:20px; bottom:-2px;
+    width:1px; background:var(--border);
+  }
+  .timeline-dot{
+    width:17px; height:17px; flex-shrink:0; margin-top:2px;
+    background:#fff; border:3px solid #1a2340; border-radius:9999px;
+    position:relative; z-index:2;
+  }
+  .timeline-dot--accent{ border-color:var(--accent) }
+  .timeline-body{ flex:1; min-width:0 }
+  .timeline-title{ font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:2px }
+  .timeline-date{ font-size:11px; color:var(--text-secondary); margin-bottom:4px }
+  .timeline-desc{ font-size:12px; color:var(--text-secondary); line-height:1.45 }
+
+  /* Documentos */
+  .doc-list{ display:flex; flex-direction:column; gap:8px }
+  .doc-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px;
+    background:#fafafb; border:1px solid var(--border); border-radius:8px;
+    transition:background .12s, border-color .12s;
+    cursor:pointer; text-decoration:none;
+    color:inherit;
+  }
+  .doc-item:hover{ background:#f3f4f8; border-color:var(--border-dark) }
+  .doc-item__ico{
+    width:34px; height:34px; flex-shrink:0;
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-secondary);
+  }
+  .doc-item__ico svg{ width:16px; height:16px }
+  .doc-item__meta{ flex:1; min-width:0 }
+  .doc-item__name{
+    font-size:12px; font-weight:600; color:var(--text-primary);
+    line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .doc-item__sub{ font-size:10px; color:var(--text-secondary); margin-top:2px }
+  .doc-item__action{ color:var(--text-secondary); flex-shrink:0 }
+  .doc-item__action svg{ width:14px; height:14px }
+
+  /* ── Gallery / carousel en Información general ── */
+  .detail-gallery{ position:relative; margin:0 0 18px }
+  .detail-gallery__track{
+    display:flex; gap:10px;
+    overflow-x:auto; scroll-behavior:smooth;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    padding:2px 0 6px;
+  }
+  .detail-gallery__track::-webkit-scrollbar{ display:none }
+  .detail-gallery__item{
+    flex:0 0 auto; width:180px; height:120px;
+    border-radius:10px; overflow:hidden;
+    border:1px solid var(--border);
+    cursor:zoom-in; position:relative;
+  }
+  .detail-gallery__item img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    transition:transform .3s ease;
+  }
+  .detail-gallery__item:hover img{ transform:scale(1.04) }
+  .detail-gallery__nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(255,255,255,.96); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:2;
+    box-shadow:0 2px 6px rgba(0,0,0,.14);
+  }
+  .detail-gallery__nav:hover{ background:#fff }
+  .detail-gallery__nav svg{ width:14px; height:14px; color:var(--text-primary) }
+  .detail-gallery__nav--prev{ left:-10px }
+  .detail-gallery__nav--next{ right:-10px }
+
+  /* ── Lightbox (visor fullscreen) ── */
+  .lb-overlay{
+    position:fixed; inset:0; z-index:3000;
+    background:rgba(0,0,0,.88);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    display:none; flex-direction:column;
+    animation:fadeIn .2s ease;
+  }
+  .lb-overlay.open{ display:flex }
+  .lb-header{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 24px; z-index:5; pointer-events:none;
+  }
+  .lb-header > *{ pointer-events:auto }
+  .lb-counter{
+    color:#fff; font-size:13px; font-weight:500;
+    background:rgba(0,0,0,.45); padding:6px 14px; border-radius:9999px;
+    backdrop-filter:blur(4px);
+  }
+  .lb-close{
+    width:40px; height:40px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.12); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s, transform .15s;
+    backdrop-filter:blur(4px);
+  }
+  .lb-close:hover{ background:rgba(255,255,255,.22); transform:scale(1.05) }
+  .lb-close svg{ width:20px; height:20px }
+  .lb-main{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    position:relative; padding:60px 80px 140px; min-height:0;
+  }
+  .lb-main__img{
+    max-width:100%; max-height:calc(100vh - 240px);
+    object-fit:contain; border-radius:12px;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    animation:lbPop .3s cubic-bezier(.4,0,.2,1);
+    user-select:none; -webkit-user-drag:none;
+  }
+  @keyframes lbPop{
+    from{ opacity:0; transform:scale(.96) }
+    to  { opacity:1; transform:scale(1) }
+  }
+  .lb-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:48px; height:48px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.12); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s, transform .15s;
+    backdrop-filter:blur(4px);
+  }
+  .lb-nav:hover{ background:rgba(255,255,255,.24) }
+  .lb-nav--prev{ left:24px } .lb-nav--next{ right:24px }
+  .lb-nav svg{ width:22px; height:22px }
+  .lb-thumbs{
+    position:absolute; bottom:0; left:0; right:0;
+    padding:18px 24px 22px;
+    background:linear-gradient(to top, rgba(0,0,0,.55), transparent);
+    display:flex; justify-content:center;
+    pointer-events:none;
+  }
+  .lb-thumbs__track{
+    display:flex; gap:8px; max-width:100%;
+    overflow-x:auto; padding:4px; scrollbar-width:none;
+    pointer-events:auto;
+  }
+  .lb-thumbs__track::-webkit-scrollbar{ display:none }
+  .lb-thumb{
+    flex:0 0 auto; width:72px; height:56px;
+    border-radius:8px; overflow:hidden; cursor:pointer;
+    opacity:.55; border:2px solid transparent;
+    transition:opacity .15s, border-color .15s;
+    background:#000;
+  }
+  .lb-thumb:hover{ opacity:.85 }
+  .lb-thumb--active{ opacity:1; border-color:var(--naranja, #FF7500) }
+  .lb-thumb img{ width:100%; height:100%; object-fit:cover; display:block; user-select:none; -webkit-user-drag:none }
+
+  @media (max-width: 900px){
+    .map-body{ grid-template-columns: 1fr }
+  }
+</style>
+</head>
+<body>
+
+
+    <div class="page">
+
+      <div class="page-head">
+        <div class="page-head__title">
+          <h1>Mapa de Escenarios por Departamento</h1>
+          <p>Cantidad de escenarios deportivos registrados en el territorio nacional</p>
+        </div>
+      </div>
+
+      <div class="map-canvas">
+
+      <div class="filter-toolbar" id="filterBar">
+        <div class="filter-row filter-row--primary">
+          <div class="naowee-searchbox naowee-searchbox--medium naowee-searchbox--squared filter-search" id="searchWrap">
+            <div class="naowee-searchbox__input-wrap">
+              <span class="naowee-searchbox__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              </span>
+              <input type="text" id="searchInput" class="naowee-searchbox__input" placeholder="Buscar departamento o ciudad…" autocomplete="off"/>
+              <button type="button" class="naowee-searchbox__clear" id="searchClear" aria-label="Limpiar búsqueda">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="naowee-searchbox__menu" id="searchResults" role="listbox"></div>
+          </div>
+
+          <div class="filter-dd" id="regionDD">
+            <button type="button" class="filter-dd__trigger" id="regionTrigger">
+              <span id="regionLabel">Región</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="filter-dd__menu" id="regionMenu"></div>
+          </div>
+
+          <div class="filter-dd" id="tipoDD">
+            <button type="button" class="filter-dd__trigger" id="tipoTrigger">
+              <span id="tipoLabel">Tipo</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="filter-dd__menu" id="tipoMenu"></div>
+          </div>
+
+          <div class="filter-dd" id="estadoDD">
+            <button type="button" class="filter-dd__trigger" id="estadoTrigger">
+              <span id="estadoLabel">Estado</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="filter-dd__menu" id="estadoMenu"></div>
+          </div>
+
+          <div class="naowee-segment naowee-segment--small" id="carSegment" role="tablist">
+            <span class="naowee-segment__pill naowee-segment__pill--no-anim" aria-hidden="true"></span>
+            <button type="button" class="naowee-segment__item naowee-segment__item--active" data-car="all" role="tab" aria-selected="true">Todos</button>
+            <button type="button" class="naowee-segment__item" data-car="only" role="tab" aria-selected="false">Solo CAR</button>
+          </div>
+
+          <button type="button" class="filter-reset" id="btnResetFilters" disabled>Limpiar filtros</button>
+        </div>
+
+        <div class="filter-row filter-row--chips" id="activeChips" hidden></div>
+      </div>
+
+      <div class="map-body">
+        <div>
+          <nav class="naowee-breadcrumb map-breadcrumb" id="breadcrumbBar" aria-label="Navegación del mapa">
+            <span class="naowee-breadcrumb__current">Colombia</span>
+          </nav>
+
+          <div class="map-stage" id="mapStage">
+            <!-- Skeleton loader visible mientras carga el SVG del mapa -->
+            <div class="map-skeleton" id="mapSkeleton" aria-hidden="true">
+              <div class="map-skeleton__shape skeleton"></div>
+              <div class="map-skeleton__hint">Cargando mapa…</div>
+            </div>
+
+            <!-- Nivel 1 + 2: SVG coroplético con pines cluster -->
+            <div class="map-layer" id="svgLayer">
+              <div class="map-svg-area">
+                <div id="mapContainer"></div>
+              </div>
+              <div class="pin-layer" id="pinLayer"></div>
+            </div>
+
+            <!-- Nivel 3: Leaflet con tiles reales -->
+            <div class="map-layer map-layer--hidden map-leaflet-area" id="leafletLayer" aria-hidden="true">
+              <div id="leafletMap"></div>
+            </div>
+
+            <!-- Controles de zoom (+ / −) estilo mapa. En nivel ciudad se ocultan porque Leaflet tiene los suyos. -->
+            <div class="zoom-controls" id="zoomControls" hidden>
+              <button type="button" class="zoom-btn" id="btnZoomIn" aria-label="Acercar al más relevante" title="Acercar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+              <button type="button" class="zoom-btn" id="btnZoomOut" aria-label="Alejar" title="Alejar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Side panel: ficha técnica del escenario (visible al seleccionar "Ver perfil completo") -->
+        <aside class="detail-panel" id="detailPanel" hidden aria-live="polite"></aside>
+
+        <aside class="rank-card" id="rankCard">
+          <div class="rank-title" id="rankTitle">Top departamentos</div>
+
+          <div class="legend-card">
+            <div class="legend-title">Intensidad</div>
+            <div class="legend-gradient"></div>
+            <div class="legend-ticks">
+              <span>Bajo</span>
+              <span>Medio</span>
+              <span>Alto</span>
+            </div>
+            <div class="legend-row--muted">
+              <span class="legend-swatch"></span>
+              <span>Sin datos o fuera del filtro</span>
+            </div>
+            <div class="legend-row--car">
+              <span class="legend-car-badge">★</span>
+              <span>Tiene Centro(s) de Alto Rendimiento</span>
+            </div>
+          </div>
+        </aside>
+      </div><!-- /.map-body -->
+
+      </div><!-- /.map-canvas -->
+
+    </div>
+
+<div class="map-tooltip" id="mapTooltip" role="tooltip" aria-hidden="true"></div>
+
+<!-- ═══ LIGHTBOX: visor de fotos fullscreen ═══ -->
+<div class="lb-overlay" id="lightbox" role="dialog" aria-label="Visor de fotos" aria-modal="true">
+  <div class="lb-header">
+    <div class="lb-counter" id="lbCounter">1 / 1</div>
+    <button class="lb-close" id="lbClose" type="button" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="lb-main" id="lbMain">
+    <button class="lb-nav lb-nav--prev" id="lbPrev" type="button" aria-label="Foto anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <img class="lb-main__img" id="lbImg" src="" alt=""/>
+    <button class="lb-nav lb-nav--next" id="lbNext" type="button" aria-label="Foto siguiente">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+  <div class="lb-thumbs">
+    <div class="lb-thumbs__track" id="lbThumbs"></div>
+  </div>
+</div>
+
+<!-- ═══ FOOTER Naowee ═══ -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
+<script>
+(function(){
+  'use strict';
+
+  // ── Mapping Highcharts ID → nombre de depto
+  const DEPTO_NAMES = {
+    'CO.AM':'Amazonas','CO.AN':'Antioquia','CO.AR':'Arauca','CO.AT':'Atlántico',
+    'CO.BL':'Bolívar','CO.BY':'Boyacá','CO.CL':'Caldas','CO.CQ':'Caquetá',
+    'CO.CS':'Casanare','CO.CA':'Cauca','CO.CE':'Cesar','CO.CH':'Chocó',
+    'CO.CO':'Córdoba','CO.CU':'Cundinamarca','CO.GN':'Guainía','CO.GV':'Guaviare',
+    'CO.HU':'Huila','CO.LG':'La Guajira','CO.MA':'Magdalena','CO.ME':'Meta',
+    'CO.NA':'Nariño','CO.NS':'Norte de Santander','CO.PU':'Putumayo','CO.QD':'Quindío',
+    'CO.RI':'Risaralda','CO.SA':'San Andrés y Providencia','CO.ST':'Santander',
+    'CO.SU':'Sucre','CO.TO':'Tolima','CO.VC':'Valle del Cauca','CO.VP':'Vaupés',
+    'CO.VD':'Vichada',
+    'CO.1136':'Bogotá D.C.',
+    'CO.3653':'San Andrés y Providencia'
+  };
+
+  // ── Región natural por depto
+  const DEPTO_REGION = {
+    'Amazonas':'Amazonía','Caquetá':'Amazonía','Putumayo':'Amazonía','Guainía':'Amazonía','Guaviare':'Amazonía','Vaupés':'Amazonía',
+    'Antioquia':'Andina','Boyacá':'Andina','Caldas':'Andina','Cundinamarca':'Andina','Huila':'Andina','Norte de Santander':'Andina','Quindío':'Andina','Risaralda':'Andina','Santander':'Andina','Tolima':'Andina','Bogotá D.C.':'Andina',
+    'Atlántico':'Caribe','Bolívar':'Caribe','Cesar':'Caribe','Córdoba':'Caribe','La Guajira':'Caribe','Magdalena':'Caribe','Sucre':'Caribe',
+    'San Andrés y Providencia':'Insular',
+    'Chocó':'Pacífica','Valle del Cauca':'Pacífica','Cauca':'Pacífica','Nariño':'Pacífica',
+    'Arauca':'Orinoquía','Casanare':'Orinoquía','Meta':'Orinoquía','Vichada':'Orinoquía'
+  };
+
+  const REGIONES = ['Todas','Andina','Caribe','Pacífica','Amazonía','Orinoquía','Insular'];
+
+  // ── Ciudades principales con coordenadas reales
+  // (capital de depto + 1-3 ciudades adicionales en los más poblados)
+  const CITIES = [
+    { name:'Bogotá',         depto:'Bogotá D.C.',       lat:4.7110, lon:-74.0721, weight:1.0 },
+    { name:'Medellín',       depto:'Antioquia',         lat:6.2442, lon:-75.5812, weight:0.55 },
+    { name:'Envigado',       depto:'Antioquia',         lat:6.1753, lon:-75.5916, weight:0.15 },
+    { name:'Bello',          depto:'Antioquia',         lat:6.3373, lon:-75.5540, weight:0.15 },
+    { name:'Rionegro',       depto:'Antioquia',         lat:6.1553, lon:-75.3732, weight:0.15 },
+    { name:'Cali',           depto:'Valle del Cauca',   lat:3.4516, lon:-76.5320, weight:0.60 },
+    { name:'Palmira',        depto:'Valle del Cauca',   lat:3.5394, lon:-76.3036, weight:0.15 },
+    { name:'Buenaventura',   depto:'Valle del Cauca',   lat:3.8801, lon:-77.0317, weight:0.15 },
+    { name:'Tuluá',          depto:'Valle del Cauca',   lat:4.0845, lon:-76.1954, weight:0.10 },
+    { name:'Barranquilla',   depto:'Atlántico',         lat:10.9639,lon:-74.7964, weight:0.75 },
+    { name:'Soledad',        depto:'Atlántico',         lat:10.9174,lon:-74.7641, weight:0.20 },
+    { name:'Malambo',        depto:'Atlántico',         lat:10.8584,lon:-74.7741, weight:0.05 },
+    { name:'Bucaramanga',    depto:'Santander',         lat:7.1193, lon:-73.1227, weight:0.55 },
+    { name:'Floridablanca',  depto:'Santander',         lat:7.0655, lon:-73.0883, weight:0.20 },
+    { name:'Barrancabermeja',depto:'Santander',         lat:7.0653, lon:-73.8547, weight:0.20 },
+    { name:'Socorro',        depto:'Santander',         lat:6.4633, lon:-73.2635, weight:0.05 },
+    { name:'Soacha',         depto:'Cundinamarca',      lat:4.5793, lon:-74.2168, weight:0.35 },
+    { name:'Zipaquirá',      depto:'Cundinamarca',      lat:5.0268, lon:-74.0090, weight:0.20 },
+    { name:'Girardot',       depto:'Cundinamarca',      lat:4.3045, lon:-74.8019, weight:0.15 },
+    { name:'Chía',           depto:'Cundinamarca',      lat:4.8619, lon:-74.0582, weight:0.15 },
+    { name:'Facatativá',     depto:'Cundinamarca',      lat:4.8130, lon:-74.3544, weight:0.15 },
+    { name:'Cartagena',      depto:'Bolívar',           lat:10.3910,lon:-75.4794, weight:0.70 },
+    { name:'Magangué',       depto:'Bolívar',           lat:9.2417, lon:-74.7539, weight:0.15 },
+    { name:'Turbaco',        depto:'Bolívar',           lat:10.3306,lon:-75.4106, weight:0.15 },
+    { name:'Montería',       depto:'Córdoba',           lat:8.7479, lon:-75.8814, weight:0.75 },
+    { name:'Lorica',         depto:'Córdoba',           lat:9.2397, lon:-75.8147, weight:0.25 },
+    { name:'Pasto',          depto:'Nariño',            lat:1.2136, lon:-77.2811, weight:0.70 },
+    { name:'Tumaco',         depto:'Nariño',            lat:1.7988, lon:-78.7639, weight:0.30 },
+    { name:'Tunja',          depto:'Boyacá',            lat:5.5446, lon:-73.3572, weight:0.55 },
+    { name:'Duitama',        depto:'Boyacá',            lat:5.8251, lon:-73.0324, weight:0.25 },
+    { name:'Sogamoso',       depto:'Boyacá',            lat:5.7146, lon:-72.9343, weight:0.20 },
+    { name:'Cúcuta',         depto:'Norte de Santander',lat:7.8939, lon:-72.5078, weight:0.80 },
+    { name:'Ocaña',          depto:'Norte de Santander',lat:8.2369, lon:-73.3561, weight:0.20 },
+    { name:'Ibagué',         depto:'Tolima',            lat:4.4389, lon:-75.2322, weight:0.70 },
+    { name:'Espinal',        depto:'Tolima',            lat:4.1533, lon:-74.8833, weight:0.30 },
+    { name:'Santa Marta',    depto:'Magdalena',         lat:11.2408,lon:-74.1990, weight:0.80 },
+    { name:'Ciénaga',        depto:'Magdalena',         lat:11.0061,lon:-74.2475, weight:0.20 },
+    { name:'Valledupar',     depto:'Cesar',             lat:10.4631,lon:-73.2532, weight:0.85 },
+    { name:'Aguachica',      depto:'Cesar',             lat:8.3123, lon:-73.6150, weight:0.15 },
+    { name:'Manizales',      depto:'Caldas',            lat:5.0703, lon:-75.5138, weight:0.80 },
+    { name:'La Dorada',      depto:'Caldas',            lat:5.4498, lon:-74.6646, weight:0.20 },
+    { name:'Neiva',          depto:'Huila',             lat:2.9345, lon:-75.2809, weight:0.80 },
+    { name:'Pitalito',       depto:'Huila',             lat:1.8585, lon:-76.0499, weight:0.20 },
+    { name:'Pereira',        depto:'Risaralda',         lat:4.8133, lon:-75.6961, weight:0.80 },
+    { name:'Dosquebradas',   depto:'Risaralda',         lat:4.8339, lon:-75.6686, weight:0.20 },
+    { name:'Villavicencio',  depto:'Meta',              lat:4.1420, lon:-73.6266, weight:0.85 },
+    { name:'Acacías',        depto:'Meta',              lat:3.9893, lon:-73.7584, weight:0.15 },
+    { name:'Riohacha',       depto:'La Guajira',        lat:11.5444,lon:-72.9072, weight:0.70 },
+    { name:'Maicao',         depto:'La Guajira',        lat:11.3782,lon:-72.2386, weight:0.30 },
+    { name:'Sincelejo',      depto:'Sucre',             lat:9.2950, lon:-75.3978, weight:0.90 },
+    { name:'Popayán',        depto:'Cauca',             lat:2.4448, lon:-76.6147, weight:0.90 },
+    { name:'Quibdó',         depto:'Chocó',             lat:5.6947, lon:-76.6610, weight:1.00 },
+    { name:'Armenia',        depto:'Quindío',           lat:4.5339, lon:-75.6811, weight:1.00 },
+    { name:'Yopal',          depto:'Casanare',          lat:5.3378, lon:-72.3959, weight:1.00 },
+    { name:'Mocoa',          depto:'Putumayo',          lat:1.1520, lon:-76.6479, weight:1.00 },
+    { name:'Florencia',      depto:'Caquetá',           lat:1.6144, lon:-75.6062, weight:1.00 },
+    { name:'Arauca',         depto:'Arauca',            lat:7.0900, lon:-70.7617, weight:1.00 },
+    { name:'San José del Guaviare', depto:'Guaviare',   lat:2.5710, lon:-72.6412, weight:1.00 },
+    { name:'Puerto Carreño', depto:'Vichada',           lat:6.1897, lon:-67.4859, weight:1.00 },
+    { name:'Leticia',        depto:'Amazonas',          lat:-4.2150,lon:-69.9406, weight:1.00 },
+    { name:'Inírida',        depto:'Guainía',           lat:3.8653, lon:-67.9239, weight:1.00 },
+    { name:'Mitú',           depto:'Vaupés',            lat:1.2538, lon:-70.2339, weight:1.00 },
+    { name:'San Andrés',     depto:'San Andrés y Providencia', lat:12.5847,lon:-81.7006, weight:1.00 }
+  ];
+
+  // ── Código de color + icono outline por tipo de escenario
+  const TIPO_COLORS = {
+    'Cancha múltiple':    '#2563eb',
+    'Piscina':            '#06b6d4',
+    'Coliseo':            '#a855f7',
+    'Estadio':            '#16a34a',
+    'Pista atlética':     '#e11d48',
+    'Gimnasio':           '#f59e0b',
+    'Velódromo':          '#8b5cf6',
+    'Escenario náutico':  '#0284c7',
+    'Patinódromo':        '#ec4899',
+    'Villa Olímpica':     '#d74009',
+    'Complejo deportivo': '#475569',
+    'Otro':               '#94a3b8'
+  };
+  // Iconos outline (stroke-only) 24×24 — se usan en pin individual, dropdown y popover
+  const TIPO_ICONS = {
+    'Cancha múltiple':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M12 5v14M3 12h18"/><circle cx="12" cy="12" r="2"/></svg>',
+    'Piscina':            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c1.5-1 3-1 4.5 0S9.5 18 11 17s3-1 4.5 0 3 1 4.5 0 2-1 2-1"/><path d="M2 12c1.5-1 3-1 4.5 0S9.5 13 11 12s3-1 4.5 0 3 1 4.5 0 2-1 2-1"/><path d="M6 12V6a2 2 0 0 1 2-2h1M16 12V6a2 2 0 0 0-2-2h-1"/></svg>',
+    'Coliseo':            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="10" rx="9" ry="3"/><path d="M3 10v7c0 1.7 4 3 9 3s9-1.3 9-3v-7"/><path d="M7 10.5V19M12 10.5V20M17 10.5V19"/></svg>',
+    'Estadio':            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="6"/><path d="M12 6v12M3 12h18"/><circle cx="12" cy="12" r="1.2"/></svg>',
+    'Pista atlética':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="5"/><rect x="5.5" y="10" width="13" height="4" rx="2"/></svg>',
+    'Gimnasio':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="3" height="6" rx="1"/><rect x="18.5" y="9" width="3" height="6" rx="1"/><rect x="6" y="7" width="3" height="10" rx="1"/><rect x="15" y="7" width="3" height="10" rx="1"/><path d="M9 12h6"/></svg>',
+    'Velódromo':          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16l4-7h4l4 7M10 9h4M14 9l1 3"/></svg>',
+    'Escenario náutico':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20c1.5-1 3-1 4.5 0S10.5 21 12 20s3-1 4.5 0 3 1 4.5 0"/><path d="M6 17l6-11 6 11z"/><path d="M12 3v3"/></svg>',
+    'Patinódromo':        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h3l4 7M13 5l-3 6M10 17h10"/><circle cx="6" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/><circle cx="16" cy="19" r="1.5"/></svg>',
+    'Villa Olímpica':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="4"/><circle cx="16" cy="9" r="4"/><circle cx="12" cy="15" r="4"/></svg>',
+    'Complejo deportivo': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="7" height="12" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/><path d="M5 12h3M5 15h3M5 18h3M15 7h4M15 11h4M15 15h4"/></svg>',
+    'Otro':               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>'
+  };
+  function tipoColor(t){ return TIPO_COLORS[t] || '#94a3b8' }
+  function tipoIcon(t){ return TIPO_ICONS[t] || TIPO_ICONS['Otro'] }
+
+  // ── Generador de nombres plausibles por tipo
+  const NOMBRE_PREFIX = {
+    'Cancha múltiple':['Cancha','Polideportivo','Parque'],
+    'Piscina':['Piscina','Complejo Acuático','Centro Acuático'],
+    'Coliseo':['Coliseo','Coliseo Cubierto'],
+    'Estadio':['Estadio','Estadio Municipal'],
+    'Pista atlética':['Pista Atlética','Pista de Atletismo'],
+    'Gimnasio':['Gimnasio','Centro Deportivo','Gym'],
+    'Velódromo':['Velódromo'],
+    'Escenario náutico':['Club Náutico','Escenario Náutico','Marina'],
+    'Patinódromo':['Patinódromo','Pista de Patinaje'],
+    'Villa Olímpica':['Villa Olímpica','Centro Olímpico'],
+    'Complejo deportivo':['Complejo Deportivo','Unidad Deportiva','Centro Deportivo'],
+    'Otro':['Espacio Deportivo','Cancha','Zona Deportiva']
+  };
+  const APELLIDOS = [
+    'Bolívar','Santander','Nariño','Galán','Uribe','Restrepo','Pacheco',
+    'Caldas','Gaitán','Mosquera','Córdoba','Mutis','Rondón','del Valle',
+    'de la Paz','del Norte','del Sur','Central','Olímpico','Municipal',
+    'El Campín','El Rosal','La Esperanza','Los Pinos','San Pedro','San Juan'
+  ];
+
+  // ── Rango de capacidad típica por tipo (para mock)
+  const CAPACIDAD_RANGE = {
+    'Cancha múltiple':    [200, 2000],
+    'Piscina':            [100, 2500],
+    'Coliseo':            [1500, 15000],
+    'Estadio':            [5000, 45000],
+    'Pista atlética':     [500, 6000],
+    'Gimnasio':           [30, 400],
+    'Velódromo':          [2000, 8000],
+    'Escenario náutico':  [100, 1500],
+    'Patinódromo':        [500, 3000],
+    'Villa Olímpica':     [5000, 25000],
+    'Complejo deportivo': [800, 8000],
+    'Otro':               [50, 1000]
+  };
+  const ESTADOS_CONSERVACION = ['Excelente','Bueno','Regular'];
+  const ESTADO_COLORS = {
+    'Excelente':'#16a34a','Bueno':'#1f78d1','Regular':'#f59e0b'
+  };
+
+  // ═══ Generar 200 escenarios mock ═══
+  function prng(seed){ let s = seed; return () => { s = (s*9301 + 49297) % 233280; return s/233280 } }
+  function generateEscenarios(){
+    const rng = prng(42);
+    const out = [];
+    // Proporcional al total por depto, cap total = 200
+    const deptoTargets = {};
+    const totalDeclared = Object.values(DEPTO_TOTALS).reduce((a,b)=>a+b.total,0);
+    Object.entries(DEPTO_TOTALS).forEach(([d, base]) => {
+      deptoTargets[d] = Math.max(1, Math.round(base.total/totalDeclared * 200));
+    });
+
+    let id = 1;
+    Object.entries(deptoTargets).forEach(([depto, count]) => {
+      const cities = CITIES.filter(c => c.depto === depto);
+      if (cities.length === 0) return;
+      const totalW = cities.reduce((s,c)=>s+c.weight, 0);
+      const carBudget = DEPTO_TOTALS[depto].car;
+      let carsAssigned = 0;
+
+      for (let i = 0; i < count; i++){
+        // Pick city weighted
+        let roll = rng() * totalW;
+        let city = cities[0];
+        for (const c of cities){ roll -= c.weight; if (roll <= 0){ city = c; break } }
+        // Tipo weighted
+        let tr = rng();
+        let tipo = 'Cancha múltiple';
+        let acc = 0;
+        for (const [t, w] of Object.entries(TIPO_WEIGHTS)){
+          acc += w;
+          if (tr <= acc){ tipo = t; break }
+        }
+        // CAR only if depto has budget + is relevant tipo
+        const carEligible = carsAssigned < carBudget && ['Villa Olímpica','Coliseo','Piscina','Pista atlética','Velódromo','Complejo deportivo'].includes(tipo);
+        const car = carEligible && rng() < 0.45;
+        if (car) carsAssigned++;
+
+        // Jitter ±0.03 deg (~3km)
+        const lat = city.lat + (rng() - 0.5) * 0.06;
+        const lon = city.lon + (rng() - 0.5) * 0.06;
+
+        // Nombre plausible
+        const pref = NOMBRE_PREFIX[tipo] || ['Escenario'];
+        const name = `${pref[Math.floor(rng()*pref.length)]} ${APELLIDOS[Math.floor(rng()*APELLIDOS.length)]}`;
+
+        // Capacidad proporcional al rango del tipo (con jitter)
+        const cRange = CAPACIDAD_RANGE[tipo] || [200, 2000];
+        const cap = Math.round((cRange[0] + rng() * (cRange[1] - cRange[0])) / 50) * 50;
+        // Año: 1970-2023, sesgado hacia años recientes
+        const anioBase = 1970 + Math.floor(Math.pow(rng(), 0.6) * 53);
+        // Estado: más recientes tienden a mejor estado
+        const edad = 2026 - anioBase;
+        let estIdx = 0;
+        if (edad > 40) estIdx = 2;          // Regular
+        else if (edad > 20) estIdx = rng() < 0.5 ? 1 : 2;  // Bueno/Regular
+        else estIdx = rng() < 0.7 ? 0 : 1;  // Excelente/Bueno
+        const estado = ESTADOS_CONSERVACION[estIdx];
+
+        out.push({
+          id: id++, nombre: name, tipo, car,
+          depto, cityName: city.name, lat, lon,
+          anioConstruccion: anioBase,
+          capacidad: cap,
+          estado
+        });
+      }
+    });
+    return out;
+  }
+  // ESCENARIOS se genera más abajo, después de que DEPTO_TOTALS y TIPO_WEIGHTS existan
+
+  // ═══ Proyección lat/lon → SVG (700×700) usando bbox de Colombia ═══
+  // NOTA: el SVG de Highcharts usa proyección Miller, no lineal. Esta aproximación
+  // lineal sirve como base, pero se calibra per-depto vía DEPTO_CENTROID (ver
+  // projectCityPin) para que los pines queden sobre su polígono real.
+  const CO_BBOX = { latMin:-4.5, latMax:13.0, lonMin:-82.0, lonMax:-66.5 };
+  const SVG_W = 700, SVG_H = 700;
+  function projectLL(lat, lon){
+    const x = (lon - CO_BBOX.lonMin) / (CO_BBOX.lonMax - CO_BBOX.lonMin) * SVG_W;
+    const y = (CO_BBOX.latMax - lat) / (CO_BBOX.latMax - CO_BBOX.latMin) * SVG_H;
+    return { x, y };
+  }
+
+  // Centroide real del path SVG por depto (llenado post-load en computeDeptoCentroids).
+  // Lo usamos como anclaje correcto de los pines, corrigiendo el sesgo de la
+  // proyección lineal vs. la proyección Miller del SVG base.
+  const DEPTO_CENTROID = {};
+  function projectCityPin(city){
+    const c = DEPTO_CENTROID[city.depto];
+    if (!c) return projectLL(city.lat, city.lon);
+    // La capital (mayor peso) del depto se ancla exactamente en el centroide;
+    // el mismo offset se aplica al resto de ciudades del depto para preservar
+    // posiciones relativas internas.
+    const siblings = CITIES.filter(x => x.depto === city.depto);
+    const capital = siblings.reduce((a, b) => b.weight > a.weight ? b : a, siblings[0]);
+    const capRaw = projectLL(capital.lat, capital.lon);
+    const dx = c.x - capRaw.x;
+    const dy = c.y - capRaw.y;
+    const raw = projectLL(city.lat, city.lon);
+    const pos = { x: raw.x + dx, y: raw.y + dy };
+    return clampPointToDepto(pos, city.depto);
+  }
+
+  // Si el punto cae fuera del path del depto (común en ciudades costeras o
+  // lejanas a la capital por desfase de proyección Miller vs lineal), se mueve
+  // hacia el centroide hasta caer dentro. Preserva dirección relativa al centro.
+  function clampPointToDepto(pt, deptoName){
+    const container = document.getElementById('mapContainer');
+    const svg = container?.querySelector('svg');
+    if (!svg) return pt;
+    const paths = [];
+    Object.entries(DEPTO_NAMES).forEach(([id, d]) => {
+      if (d !== deptoName) return;
+      const p = container.querySelector(`path[id="${CSS.escape(id)}"]`);
+      if (p) paths.push(p);
+    });
+    if (paths.length === 0) return pt;
+    const testPt = svg.createSVGPoint();
+    const isInside = (x, y) => {
+      testPt.x = x; testPt.y = y;
+      return paths.some(p => {
+        try { return p.isPointInFill(testPt) } catch { return false }
+      });
+    };
+    if (isInside(pt.x, pt.y)) return pt;
+    // Mover hacia el centroide del depto hasta caer dentro (con margen extra)
+    const cen = DEPTO_CENTROID[deptoName];
+    if (!cen) return pt;
+    for (let t = 0.15; t <= 1; t += 0.1){
+      const nx = pt.x + (cen.x - pt.x) * t;
+      const ny = pt.y + (cen.y - pt.y) * t;
+      if (isInside(nx, ny)) return { x: nx, y: ny };
+    }
+    return { x: cen.x, y: cen.y };
+  }
+
+  // ── Tipos de escenario (según SUID). icons y colors definidos en TIPO_ICONS/TIPO_COLORS
+  const TIPOS = [
+    { id:'all',                key:null,                    label:'Todos los tipos' },
+    { id:'cancha-multiple',    key:'Cancha múltiple',       label:'Cancha múltiple' },
+    { id:'piscina',            key:'Piscina',               label:'Piscina' },
+    { id:'coliseo',            key:'Coliseo',               label:'Coliseo' },
+    { id:'estadio',            key:'Estadio',               label:'Estadio' },
+    { id:'pista-atletica',     key:'Pista atlética',        label:'Pista atlética' },
+    { id:'gimnasio',           key:'Gimnasio',              label:'Gimnasio' },
+    { id:'velodromo',          key:'Velódromo',             label:'Velódromo' },
+    { id:'escenario-nautico',  key:'Escenario náutico',     label:'Escenario náutico' },
+    { id:'patinodromo',        key:'Patinódromo',           label:'Patinódromo' },
+    { id:'villa-olimpica',     key:'Villa Olímpica',        label:'Villa Olímpica' },
+    { id:'complejo',           key:'Complejo deportivo',    label:'Complejo deportivo' },
+    { id:'otro',               key:'Otro',                  label:'Otro' }
+  ];
+  const TIPO_KEYS = TIPOS.filter(t => t.key).map(t => t.key);
+
+  // ── Distribución proporcional por tipo (suma = 1.0)
+  const TIPO_WEIGHTS = {
+    'Cancha múltiple':0.34, 'Piscina':0.05, 'Coliseo':0.08, 'Estadio':0.07,
+    'Pista atlética':0.02, 'Gimnasio':0.14, 'Velódromo':0.01,
+    'Escenario náutico':0.03, 'Patinódromo':0.015, 'Villa Olímpica':0.005,
+    'Complejo deportivo':0.11, 'Otro':0.13
+  };
+
+  // ── Totales + CAR por depto (CAR típicamente concentrado en Bogotá/Antioquia/Valle/Cundinamarca)
+  const DEPTO_TOTALS = {
+    'Bogotá D.C.':        { total:2900, car:18 },
+    'Antioquia':          { total:2400, car:12 },
+    'Valle del Cauca':    { total:1900, car:9  },
+    'Atlántico':          { total:1600, car:5  },
+    'Santander':          { total:1200, car:4  },
+    'Cundinamarca':       { total:1200, car:6  },
+    'Bolívar':            { total: 980, car:2  },
+    'Córdoba':            { total: 870, car:1  },
+    'Nariño':             { total: 820, car:2  },
+    'Boyacá':             { total: 780, car:2  },
+    'Norte de Santander': { total: 720, car:1  },
+    'Tolima':             { total: 640, car:1  },
+    'Magdalena':          { total: 610, car:1  },
+    'Cesar':              { total: 560, car:0  },
+    'Caldas':             { total: 540, car:2  },
+    'Huila':              { total: 500, car:1  },
+    'Risaralda':          { total: 480, car:2  },
+    'Meta':               { total: 420, car:1  },
+    'La Guajira':         { total: 380, car:0  },
+    'Sucre':              { total: 360, car:0  },
+    'Cauca':              { total: 340, car:1  },
+    'Chocó':              { total: 280, car:0  },
+    'Quindío':            { total: 260, car:1  },
+    'Casanare':           { total: 220, car:0  },
+    'Putumayo':           { total: 180, car:0  },
+    'Caquetá':            { total: 160, car:0  },
+    'Arauca':             { total: 140, car:0  },
+    'Guaviare':           { total:  90, car:0  },
+    'Vichada':            { total:  80, car:0  },
+    'Amazonas':           { total:  70, car:0  },
+    'Guainía':            { total:  45, car:0  },
+    'Vaupés':             { total:  40, car:0  },
+    'San Andrés y Providencia': { total:120, car:0 }
+  };
+
+  // ── PRNG determinístico para generar byTipo reproducible
+  function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = (h*16777619)>>>0 } return h }
+
+  const DEPTO_DATA = {};
+  Object.entries(DEPTO_TOTALS).forEach(([depto, base]) => {
+    const seed = hashStr(depto);
+    const byTipo = {};
+    let assigned = 0;
+    TIPO_KEYS.forEach((tipo, idx) => {
+      // jitter determinístico ±30%
+      const j = 1 + (((seed >> (idx*3)) & 0xff)/255 - 0.5) * 0.6;
+      const raw = Math.round(base.total * (TIPO_WEIGHTS[tipo] || 0) * j);
+      byTipo[tipo] = Math.max(0, raw);
+      assigned += byTipo[tipo];
+    });
+    // ajuste final: hacer que la suma coincida con total
+    const delta = base.total - assigned;
+    if (delta !== 0) byTipo['Cancha múltiple'] = Math.max(0, (byTipo['Cancha múltiple']||0) + delta);
+
+    // CAR por tipo: distribuye d.car entre tipos proporcional a byTipo, con jitter
+    // determinístico. Tipos "no-CAR" típicos (Cancha múltiple, Otro) reciben peso 0.
+    const CAR_TIPO_WEIGHTS = {
+      'Piscina':1.6, 'Coliseo':1.4, 'Estadio':1.3, 'Pista atlética':1.8,
+      'Gimnasio':1.1, 'Velódromo':2.0, 'Escenario náutico':1.2,
+      'Patinódromo':1.5, 'Villa Olímpica':2.2, 'Complejo deportivo':1.5,
+      'Cancha múltiple':0.15, 'Otro':0.1
+    };
+    const carByTipo = {};
+    if (base.car > 0){
+      const weighted = TIPO_KEYS.map((tipo, idx) => {
+        const j2 = 1 + (((seed >> (idx*5)) & 0xff)/255 - 0.5) * 0.4;
+        const w = (byTipo[tipo] || 0) * (CAR_TIPO_WEIGHTS[tipo] || 1) * j2;
+        return { tipo, w };
+      });
+      const totalW = weighted.reduce((s, x) => s + x.w, 0) || 1;
+      let carAssigned = 0;
+      weighted.forEach(({tipo, w}) => {
+        const raw = Math.floor((w / totalW) * base.car);
+        carByTipo[tipo] = raw;
+        carAssigned += raw;
+      });
+      // asigna el residuo a los tipos con mayor peso primero
+      let residual = base.car - carAssigned;
+      weighted.sort((a,b) => b.w - a.w).forEach(({tipo}) => {
+        if (residual <= 0) return;
+        carByTipo[tipo] = (carByTipo[tipo] || 0) + 1;
+        residual--;
+      });
+    } else {
+      TIPO_KEYS.forEach(tipo => { carByTipo[tipo] = 0 });
+    }
+
+    // Fracción de escenarios por estado de conservación (jitter determinístico).
+    // Permite que al filtrar "Bueno" o "Excelente" cambien proporciones y por
+    // tanto los colores del choropleth.
+    const ESTADO_BASE = { 'Excelente':0.40, 'Bueno':0.35, 'Regular':0.25 };
+    const estadoFrac = {};
+    let efSum = 0;
+    ESTADOS_CONSERVACION.forEach((est, idx) => {
+      const j = 1 + (((seed >> (idx*7)) & 0xff)/255 - 0.5) * 0.5;
+      estadoFrac[est] = (ESTADO_BASE[est] || 0) * j;
+      efSum += estadoFrac[est];
+    });
+    if (efSum > 0) Object.keys(estadoFrac).forEach(k => { estadoFrac[k] /= efSum });
+
+    DEPTO_DATA[depto] = { total: base.total, car: base.car, byTipo, carByTipo, estadoFrac };
+  });
+
+  // ═══ Ahora sí generar los 200 escenarios (depende de DEPTO_TOTALS + TIPO_WEIGHTS) ═══
+  const ESCENARIOS = generateEscenarios();
+
+  // ═══ STATE ═══
+  const state = {
+    region: 'Todas',
+    tipoIds: new Set(), // vacío = todos los tipos
+    carOnly: false,
+    estados: new Set()  // vacío = todos los estados
+  };
+
+  // ── Valor visible para un depto según el filtro activo
+  function valueFor(depto){
+    const d = DEPTO_DATA[depto];
+    if (!d) return 0;
+    // Suma las contribuciones de los tipos seleccionados (vacío = todos)
+    const activeTipos = state.tipoIds.size > 0
+      ? [...state.tipoIds].map(id => TIPOS.find(t => t.id === id)).filter(t => t && t.key).map(t => t.key)
+      : null;
+    let base;
+    if (state.carOnly){
+      if (activeTipos){
+        base = activeTipos.reduce((s, k) => s + ((d.carByTipo && d.carByTipo[k]) || 0), 0);
+      } else {
+        base = d.car;
+      }
+    } else {
+      if (activeTipos){
+        base = activeTipos.reduce((s, k) => s + (d.byTipo[k] || 0), 0);
+      } else {
+        base = d.total;
+      }
+    }
+    // Intersección con estado(s): multiplica por la suma de fracciones seleccionadas
+    if (state.estados.size > 0 && state.estados.size < ESTADOS_CONSERVACION.length){
+      let frac = 0;
+      state.estados.forEach(est => { frac += (d.estadoFrac && d.estadoFrac[est]) || 0 });
+      base = Math.round(base * frac);
+    }
+    return base;
+  }
+
+  function passesRegion(depto){
+    return state.region === 'Todas' || DEPTO_REGION[depto] === state.region;
+  }
+
+  // ═══ Heat-map color ═══
+  function heatColor(value, max){
+    if (!max || value === 0) return '#e7e9f3';
+    const r = value / max;
+    if (r >= 0.80) return '#d74009';
+    if (r >= 0.55) return '#ef7a3c';
+    if (r >= 0.35) return '#f59456';
+    if (r >= 0.20) return '#faaf72';
+    if (r >= 0.10) return '#fcc693';
+    if (r >= 0.05) return '#fddbb4';
+    return '#fee8cd';
+  }
+
+  // ═══ NAV STATE MACHINE ═══
+  // zoomedCity: cuando el usuario hace click en un cluster de ciudad dentro de un depto
+  // con clusters vecinos solapados, entramos a un "sub-zoom" del SVG (mismo level 'depto')
+  // para separar los clusters visualmente. Un segundo click ya entra a Leaflet.
+  const nav = { level:'country', depto:null, city:null, zoomedCity:null };
+  // viewBox animado (vector puro, zero pixelado a cualquier nivel)
+  const viewBox = { x:0, y:0, w:SVG_W, h:SVG_H };
+  let vbAnimId = null;
+  let activeEsc = null; // escenario seleccionado para el side panel
+  let dragSuppressClick = false; // al soltar drag, absorbe el click para no entrar al depto
+
+  // ═══ SVG handling: cargar una vez y repaint por id ═══
+  let svgLoaded = false;
+  function applyColors(){
+    const container = document.getElementById('mapContainer');
+    if (!svgLoaded) return;
+
+    let max = 0;
+    Object.keys(DEPTO_DATA).forEach(d => {
+      if (!passesRegion(d)) return;
+      max = Math.max(max, valueFor(d));
+    });
+
+    // Cuando hay un depto activo (nivel depto o ciudad), los demás se pintan
+    // blanco para dar foco al seleccionado.
+    const focusedDepto = (nav.level === 'depto' || nav.level === 'city') ? nav.depto : null;
+
+    Object.entries(DEPTO_NAMES).forEach(([id, depto]) => {
+      const paths = container.querySelectorAll(`path[id="${CSS.escape(id)}"]`);
+      let fill;
+      if (focusedDepto){
+        fill = (depto === focusedDepto) ? heatColor(valueFor(depto), max) : '#ffffff';
+      } else if (!passesRegion(depto)) {
+        fill = '#ecedf5';
+      } else {
+        fill = heatColor(valueFor(depto), max);
+      }
+      paths.forEach(p => { p.style.fill = fill });
+    });
+  }
+
+  function injectBaseSvgStyle(){
+    const container = document.getElementById('mapContainer');
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    // Scope al SVG del mapa: inyectar en <head> con selector #mapContainer para que
+    // no leakee a burger/logout/zoom/breadcrumb ni a ningún otro <path> del documento.
+    if (!document.getElementById('mapSvgScopedStyles')){
+      const styleEl = document.createElement('style');
+      styleEl.id = 'mapSvgScopedStyles';
+      styleEl.textContent = `
+        #mapContainer svg path {
+          stroke:#fff; stroke-width:0.6;
+          transition: fill .25s ease, filter .35s cubic-bezier(.4,0,.2,1), stroke-width .25s;
+          vector-effect:non-scaling-stroke;
+        }
+        #mapContainer svg path[id^="CO"]:hover,
+        #mapContainer svg path[id^="CO"].is-active {
+          cursor: pointer;
+          filter: brightness(1.05) drop-shadow(0 2px 6px rgba(0,0,0,.18));
+        }
+        /* Depto activo: efecto "escalón" (step up). Simulamos un bloque 3D
+           usando drop-shadows CON 0 blur que dibujan el costado del escalón,
+           + una sombra ambient sutil que asienta el bloque sobre el piso. */
+        #mapContainer svg path[id^="CO"].is-depto-active {
+          filter:
+            drop-shadow(0 3px 0 rgba(0,0,0,.18))   /* lateral/ribete plano (step side) */
+            drop-shadow(0 5px 0 rgba(0,0,0,.12))   /* segunda capa de espesor */
+            drop-shadow(0 7px 6px rgba(0,0,0,.18)); /* ambient blur muy suave al pie */
+          stroke:#ffffff;
+          stroke-width:2.4;
+          animation: deptoLift .35s cubic-bezier(.34,1.4,.64,1) both;
+        }
+        /* Animación: el "escalón" aparece subiendo — el espesor crece hasta su valor final */
+        @keyframes deptoLift {
+          0%   { filter: drop-shadow(0 0 0 rgba(0,0,0,0)) drop-shadow(0 0 0 rgba(0,0,0,0)) drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          100% { filter: drop-shadow(0 3px 0 rgba(0,0,0,.18)) drop-shadow(0 5px 0 rgba(0,0,0,.12)) drop-shadow(0 7px 6px rgba(0,0,0,.18)); }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    // Eliminar el texto "Copyright (c) 2025 Highsoft AS..." que viene en el SVG base
+    svg.querySelectorAll('text').forEach(t => {
+      if (/highsoft/i.test(t.textContent)) t.remove();
+    });
+    // Inicializar viewBox al tamaño original del SVG (700×700) y soltar width/height fijos
+    svg.setAttribute('viewBox','0 0 700 700');
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+    // Sincronizar estado JS
+    viewBox.x = 0; viewBox.y = 0; viewBox.w = SVG_W; viewBox.h = SVG_H;
+    // Calcular centroides reales por depto para anclar los pines correctamente
+    computeDeptoCentroids();
+  }
+
+  // ── Centroide real del path SVG por depto (bbox combinado de todos sus paths) ──
+  function computeDeptoCentroids(){
+    const uniqueDeptos = [...new Set(Object.values(DEPTO_NAMES))];
+    uniqueDeptos.forEach(d => {
+      const b = bboxForDepto(d);
+      if (b) DEPTO_CENTROID[d] = { x: b.x + b.width/2, y: b.y + b.height/2 };
+    });
+  }
+
+  // ═══ ZOOM via viewBox (vector puro, sin rasterización) ═══
+  // Retorna el bbox del depto YA transformado (en el espacio final del SVG).
+  function bboxForDepto(deptoName){
+    const container = document.getElementById('mapContainer');
+    let combined = null;
+    Object.entries(DEPTO_NAMES).forEach(([id, d]) => {
+      if (d !== deptoName) return;
+      const p = container.querySelector(`path[id="${CSS.escape(id)}"]`);
+      if (!p) return;
+      const b = p.getBBox();
+      if (!combined) combined = { x:b.x, y:b.y, x2:b.x+b.width, y2:b.y+b.height };
+      else {
+        combined.x = Math.min(combined.x, b.x);
+        combined.y = Math.min(combined.y, b.y);
+        combined.x2 = Math.max(combined.x2, b.x + b.width);
+        combined.y2 = Math.max(combined.y2, b.y + b.height);
+      }
+    });
+    if (!combined) return null;
+    return {
+      x: combined.x,
+      y: combined.y,
+      width:  combined.x2 - combined.x,
+      height: combined.y2 - combined.y
+    };
+  }
+
+  // Ajusta un viewBox a la relación de aspecto del stage para evitar letterboxing
+  function adjustVbToStage(x, y, w, h){
+    const stage = document.getElementById('mapStage');
+    const ratio = stage.clientWidth / stage.clientHeight;
+    const vRatio = w / h;
+    if (vRatio > ratio) {
+      const newH = w / ratio;
+      return { x, y: y - (newH - h)/2, w, h: newH };
+    } else {
+      const newW = h * ratio;
+      return { x: x - (newW - w)/2, y, w: newW, h };
+    }
+  }
+
+  function applyViewBox(){
+    const svg = document.querySelector('#mapContainer svg');
+    if (!svg) return;
+    svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+  }
+
+  function animateViewBoxTo(target, duration = 600){
+    if (vbAnimId) clearTimeout(vbAnimId);
+    const start = { ...viewBox };
+    const t0 = performance.now();
+    const ease = t => 1 - Math.pow(1 - t, 3);
+    function step(){
+      const t = Math.min(1, (performance.now() - t0) / duration);
+      const k = ease(t);
+      viewBox.x = start.x + (target.x - start.x) * k;
+      viewBox.y = start.y + (target.y - start.y) * k;
+      viewBox.w = start.w + (target.w - start.w) * k;
+      viewBox.h = start.h + (target.h - start.h) * k;
+      applyViewBox();
+      renderPins();
+      if (t < 1) vbAnimId = setTimeout(step, 16);
+      else vbAnimId = null;
+    }
+    // Primer step inmediato para evitar throttling de primer frame
+    step();
+  }
+
+  function resetZoom(){
+    animateViewBoxTo(adjustVbToStage(0, 0, SVG_W, SVG_H));
+  }
+
+  function zoomToDepto(deptoName){
+    const bbox = bboxForDepto(deptoName);
+    if (!bbox) return;
+    // Padding 30% alrededor del depto
+    const pad = 0.30;
+    const x = bbox.x - bbox.width * pad/2;
+    const y = bbox.y - bbox.height * pad/2;
+    const w = bbox.width * (1 + pad);
+    const h = bbox.height * (1 + pad);
+    animateViewBoxTo(adjustVbToStage(x, y, w, h));
+  }
+
+  // Zoom intermedio: centrado en la ciudad con un radio ~0.25° (≈ 28 km).
+  // Usa projectCityPin para que el centro coincida con el pin (depto-calibrado),
+  // no con projectLL lineal que queda desplazado respecto al SVG real.
+  function zoomToCityVicinity(city){
+    const RADIUS = 0.25;
+    const center = projectCityPin(city);
+    const tl = projectLL(city.lat + RADIUS, city.lon - RADIUS);
+    const br = projectLL(city.lat - RADIUS, city.lon + RADIUS);
+    const w = br.x - tl.x, h = br.y - tl.y;
+    animateViewBoxTo(adjustVbToStage(center.x - w/2, center.y - h/2, w, h));
+  }
+
+  // Detecta si un cluster de ciudad está solapado con otros (distancia pixel < threshold)
+  function hasClusterOverlap(city){
+    const THRESHOLD = 90; // px
+    const me = pinPixel(...(() => { const s = projectLL(city.lat, city.lon); return [s.x, s.y]; })());
+    const siblings = CITIES.filter(c => c.depto === nav.depto && c.name !== city.name);
+    return siblings.some(other => {
+      const escs = ESCENARIOS.filter(e => e.cityName === other.name && matchEscFilters(e));
+      if (escs.length === 0) return false;
+      const s = projectLL(other.lat, other.lon);
+      const p = pinPixel(s.x, s.y);
+      const dx = p.x - me.x, dy = p.y - me.y;
+      return Math.sqrt(dx*dx + dy*dy) < THRESHOLD;
+    });
+  }
+
+  // ═══ PIN POSITION (pixel, stage-relative) — basado en viewBox + tamaño renderizado del SVG ═══
+  function pinPixel(svgX, svgY){
+    const svg = document.querySelector('#mapContainer svg');
+    const stage = document.getElementById('mapStage');
+    if (!svg || !stage) return { x:0, y:0 };
+    const svgRect = svg.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    // Con preserveAspectRatio="xMidYMid meet" (default) el SVG deja letterbox si no match aspect.
+    // Como ajustamos el viewBox a la ratio del stage, no hay letterbox → mapeo directo.
+    const sw = svgRect.width, sh = svgRect.height;
+    const px = (svgX - viewBox.x) / viewBox.w * sw;
+    const py = (svgY - viewBox.y) / viewBox.h * sh;
+    return {
+      x: (svgRect.left - stageRect.left) + px,
+      y: (svgRect.top  - stageRect.top)  + py
+    };
+  }
+
+  // ═══ Síntesis de escenarios para el pin agregado ═══
+  // Cuando la muestra de 200 no cubre un combo de filtros pero el agregado dice
+  // que hay N escenarios, generamos un pequeño grupo representativo con nombres,
+  // capacidades, años y ubicaciones plausibles para poder explorarlos en Leaflet.
+  // Seed determinística por ciudad+filtros → mismos escenarios al re-entrar.
+  function synthesizeEscenarios(city, count){
+    const tipoIdsSorted = [...state.tipoIds].sort().join(',');
+    // Seed NO incluye state.estados — la consistencia entre filtros (ej. CAR
+    // y CAR+Regular) requiere que los mismos escenarios sintéticos existan;
+    // el estado se elige de forma estable por índice, y el filtro de estado
+    // se aplica POST-síntesis abajo.
+    const seedStr = city.depto + '|' + city.name + '|' + tipoIdsSorted
+      + '|' + (state.carOnly ? '1' : '0');
+    const rng = prng(hashStr(seedStr));
+    const activeTipoKeys = state.tipoIds.size > 0
+      ? [...state.tipoIds]
+          .map(id => (TIPOS.find(t => t.id === id) || {}).key)
+          .filter(Boolean)
+      : null;
+    // Estado siempre elegido del catálogo completo (post-filtro luego)
+    const estadoChoices = ESTADOS_CONSERVACION.slice();
+    const carTipos = ['Villa Olímpica','Coliseo','Piscina','Pista atlética','Velódromo','Complejo deportivo'];
+    const out = [];
+    for (let i = 0; i < count; i++){
+      // Tipo: uno de los activos (rotando) si hay filtro, sino weighted random
+      let escTipo;
+      if (activeTipoKeys && activeTipoKeys.length > 0){
+        escTipo = activeTipoKeys[i % activeTipoKeys.length];
+      } else {
+        let tr = rng(), acc = 0;
+        escTipo = 'Cancha múltiple';
+        for (const [t, w] of Object.entries(TIPO_WEIGHTS)){
+          acc += w;
+          if (tr <= acc){ escTipo = t; break; }
+        }
+      }
+      const escEstado = estadoChoices[Math.floor(rng() * estadoChoices.length)];
+      const car = state.carOnly
+        ? true
+        : (rng() < 0.15 && carTipos.includes(escTipo));
+      const lat = city.lat + (rng() - 0.5) * 0.06;
+      const lon = city.lon + (rng() - 0.5) * 0.06;
+      const pref = NOMBRE_PREFIX[escTipo] || ['Escenario'];
+      const nombre = `${pref[Math.floor(rng() * pref.length)]} ${APELLIDOS[Math.floor(rng() * APELLIDOS.length)]}`;
+      const cRange = CAPACIDAD_RANGE[escTipo] || [200, 2000];
+      const cap = Math.round((cRange[0] + rng() * (cRange[1] - cRange[0])) / 50) * 50;
+      const anio = 1970 + Math.floor(Math.pow(rng(), 0.6) * 53);
+      out.push({
+        id: 'synth-' + city.name + '-' + state.tipoId + '-' + i,
+        nombre, tipo: escTipo, car,
+        depto: city.depto, cityName: city.name, lat, lon,
+        anioConstruccion: anio,
+        capacidad: cap,
+        estado: escEstado,
+        _synthetic: true
+      });
+    }
+    return out;
+  }
+
+  // ═══ FILTER MATCHERS (reutilizables por pins y Leaflet) ═══
+  function matchEscFilters(esc){
+    if (!passesRegion(esc.depto)) return false;
+    if (state.carOnly && !esc.car) return false;
+    if (state.tipoIds.size > 0){
+      const activeKeys = [...state.tipoIds].map(id => {
+        const t = TIPOS.find(t => t.id === id);
+        return t && t.key;
+      }).filter(Boolean);
+      if (activeKeys.length > 0 && !activeKeys.includes(esc.tipo)) return false;
+    }
+    if (state.estados.size > 0 && !state.estados.has(esc.estado)) return false;
+    return true;
+  }
+
+  // Cuenta escenarios por tipo en una ciudad (aplicando filtros)
+  function getTipoCountsForCity(cityName){
+    const counts = {};
+    ESCENARIOS.forEach(e => {
+      if (e.cityName !== cityName || !matchEscFilters(e)) return;
+      counts[e.tipo] = (counts[e.tipo] || 0) + 1;
+    });
+    return counts;
+  }
+  function getDominantTipo(cityName){
+    const counts = getTipoCountsForCity(cityName);
+    const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+    return sorted[0]?.[0] || null;
+  }
+  function getTopTipos(cityName, n = 4){
+    const counts = getTipoCountsForCity(cityName);
+    return Object.entries(counts)
+      .sort((a,b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([t]) => t);
+  }
+
+  // Construye un cluster pin de ciudad (estilo pill horizontal con color del tipo
+  // dominante + icono). La variante se decidió tras comparar 5 opciones.
+  function buildCityClusterPin(city, escs, hasCar, isZoomed){
+    const pin = document.createElement('button');
+    pin.type = 'button';
+    pin.title = isZoomed
+      ? `Clic de nuevo para ver los ${escs.length} escenarios`
+      : `${city.name} · ${escs.length} escenarios`;
+
+    const dominant = getDominantTipo(city.name);
+    const tColor = dominant ? tipoColor(dominant) : 'var(--accent)';
+    const tIcon = dominant ? tipoIcon(dominant) : '';
+
+    pin.className = 'cluster-pin cluster-pin--combo'
+      + (hasCar ? ' cluster-pin--car' : '')
+      + (isZoomed ? ' cluster-pin--zoomed' : '');
+    pin.style.cssText = `--tipo-color:${tColor}`;
+    pin.innerHTML = `
+      <span class="cluster-pin__count">${escs.length}</span>
+      <span class="cluster-pin__sep"></span>
+      <span class="cluster-pin__label">${city.name}</span>
+      ${tIcon ? `<span class="cluster-pin__tipo-icon">${tIcon}</span>` : ''}
+    `;
+    return pin;
+  }
+
+  // ═══ PIN RENDER (niveles country + depto) ═══
+  function renderPins(){
+    const layer = document.getElementById('pinLayer');
+    layer.innerHTML = '';
+
+    // Nivel país: solo heatmap coroplético, sin cluster pins (se ve mucha info)
+    if (nav.level === 'country') return;
+
+    if (nav.level === 'depto'){
+      const cities = CITIES.filter(c => c.depto === nav.depto);
+      // El agregado del depto es la fuente de verdad (paridad con el ranking)
+      // Distribuimos el agregado proporcionalmente entre las ciudades por su weight.
+      const aggregate = valueFor(nav.depto);
+      const totalWeight = cities.reduce((s,c) => s + (c.weight || 0), 0) || 1;
+      let totalSampledPins = 0;
+      // Acumulador para el residuo: forzamos que la suma de city counts == aggregate
+      let assigned = 0;
+      cities.forEach((city, i) => {
+        const escs = ESCENARIOS.filter(e => e.cityName === city.name && matchEscFilters(e));
+        // Conteo agregado proporcional (no el sample)
+        let cityCount;
+        if (i === cities.length - 1){
+          cityCount = Math.max(0, aggregate - assigned); // último toma el residuo
+        } else {
+          cityCount = Math.round(aggregate * ((city.weight || 0) / totalWeight));
+          assigned += cityCount;
+        }
+        if (cityCount === 0 && escs.length === 0) return;
+        totalSampledPins += escs.length;
+        const hasCar = escs.some(e => e.car) || (DEPTO_DATA[nav.depto]?.car > 0 && city.weight >= 0.5);
+        const isZoomed = (nav.zoomedCity === city.name);
+        const svg = projectCityPin(city);
+        const pos = pinPixel(svg.x, svg.y);
+
+        // Fabricamos un array sintético con cityCount items para mantener el
+        // contrato visual del pin (label, color por tipo dominante del sample).
+        const synthEscs = cityCount > 0 ? new Array(cityCount).fill(escs[0] || {tipo:null}) : escs;
+        const pin = buildCityClusterPin(city, synthEscs, hasCar, isZoomed);
+        pin.style.left = pos.x + 'px';
+        pin.style.top = pos.y + 'px';
+        pin.addEventListener('click', (e) => { e.stopPropagation(); tryEnterCity(city) });
+        layer.appendChild(pin);
+      });
+
+      // Fallback (legacy): si la muestra no cubre el depto y agregado=0
+      if (totalSampledPins === 0 && aggregate === 0 && false){
+        const centroid = DEPTO_CENTROID[nav.depto];
+        if (centroid){
+          const pos = pinPixel(centroid.x, centroid.y);
+          const capital = cities.reduce((a,b) => b.weight > a.weight ? b : a, cities[0]);
+          const pin = document.createElement('button');
+          pin.type = 'button';
+          pin.className = 'cluster-pin cluster-pin--large cluster-pin--aggregate'
+            + (state.carOnly ? ' cluster-pin--car' : '');
+          pin.style.left = pos.x + 'px';
+          pin.style.top = pos.y + 'px';
+          pin.title = `${aggregate} escenarios (agregado) · clic para ver el listado`;
+          pin.innerHTML = `
+            <span class="cluster-pin__count">${aggregate}</span>
+            <span class="cluster-pin__label">${capital ? capital.name : nav.depto}</span>
+          `;
+          pin.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Entra a la ciudad en Leaflet. Si la muestra real está vacía,
+            // renderLeafletMarkers sintetiza escenarios matching los filtros.
+            if (capital) enterCity(capital);
+            else drillDown(nav.depto, null);
+          });
+          layer.appendChild(pin);
+        }
+      }
+    }
+    // Nivel city: los pines van en Leaflet, no aquí
+  }
+
+  // Click en city cluster:
+  //  1. Si ya está en sub-zoom de esta misma ciudad → entrar a Leaflet
+  //  2. Primer click → siempre sub-zoomea la ciudad (feedback consistente al usuario)
+  function tryEnterCity(city){
+    if (nav.zoomedCity === city.name){
+      enterCity(city);
+      return;
+    }
+    nav.zoomedCity = city.name;
+    zoomToCityVicinity(city);
+    renderBreadcrumb();
+    // renderPins se dispara desde animateViewBoxTo en cada step; el pin de la city zoomed
+    // se marca --zoomed para el pulse que invita al segundo click
+  }
+
+  // ═══ NAVEGACIÓN ═══
+  function goCountry(){
+    nav.level = 'country'; nav.depto = null; nav.city = null; nav.zoomedCity = null;
+    hideLeafletLayer();
+    showSvgLayer();
+    clearDeptoActive();
+    applyColors(); // restaura heatmap de todos los deptos
+    resetZoom();
+    setTimeout(renderPins, 40); // después de que aplique el zoom
+    renderBreadcrumb();
+  }
+
+  function enterDepto(deptoName){
+    nav.level = 'depto'; nav.depto = deptoName; nav.city = null; nav.zoomedCity = null;
+    hideLeafletLayer();
+    showSvgLayer();
+    clearDeptoActive();
+    markDeptoActive(deptoName);
+    applyColors(); // resto de deptos a blanco, solo el activo mantiene color
+    zoomToDepto(deptoName);
+    setTimeout(renderPins, 40);
+    renderBreadcrumb();
+  }
+
+  function enterCity(city){
+    nav.level = 'city'; nav.city = city.name;
+    // Limpiar clusters del depto
+    document.getElementById('pinLayer').innerHTML = '';
+    renderBreadcrumb();
+    showLeafletLayer(city);
+  }
+
+  function goUp(){
+    if (nav.level === 'city') enterDepto(nav.depto);
+    else if (nav.level === 'depto'){
+      // Si estamos en sub-zoom de una ciudad, primero volver al depto bbox
+      if (nav.zoomedCity){
+        nav.zoomedCity = null;
+        zoomToDepto(nav.depto);
+      } else {
+        goCountry();
+      }
+    }
+  }
+
+  function markDeptoActive(deptoName){
+    const container = document.getElementById('mapContainer');
+    Object.entries(DEPTO_NAMES).forEach(([id, d]) => {
+      if (d === deptoName){
+        const p = container.querySelector(`path[id="${CSS.escape(id)}"]`);
+        if (p) p.classList.add('is-depto-active');
+      }
+    });
+  }
+  function clearDeptoActive(){
+    document.querySelectorAll('#mapContainer path.is-depto-active').forEach(p => p.classList.remove('is-depto-active'));
+  }
+
+  // ═══ BREADCRUMB (DS: .naowee-breadcrumb) ═══
+  const SVG_CHEVRON_R = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+  function renderBreadcrumb(){
+    const bar = document.getElementById('breadcrumbBar');
+    const parts = [];
+    parts.push({ lvl:'country', label:'Colombia' });
+    if (nav.depto) parts.push({ lvl:'depto', label:nav.depto });
+    if (nav.zoomedCity && !nav.city) parts.push({ lvl:'subzoom', label:'Cerca de ' + nav.zoomedCity });
+    if (nav.city) parts.push({ lvl:'city', label:nav.city });
+
+    bar.innerHTML = parts.map((p, i) => {
+      const isLast = i === parts.length - 1;
+      const node = isLast
+        ? `<span class="naowee-breadcrumb__current">${p.label}</span>`
+        : `<a href="#" class="naowee-breadcrumb__item" data-lvl="${p.lvl}">${p.label}</a>`;
+      return i === 0 ? node : `<span class="naowee-breadcrumb__sep">${SVG_CHEVRON_R}</span>${node}`;
+    }).join('');
+
+    bar.querySelectorAll('.naowee-breadcrumb__item').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        const lvl = b.dataset.lvl;
+        if (lvl === 'country') goCountry();
+        else if (lvl === 'depto'){ nav.zoomedCity = null; enterDepto(nav.depto) }
+      });
+    });
+
+    // Zoom controls: visibles en niveles SVG (país + depto). En ciudad, Leaflet trae los suyos.
+    const zc = document.getElementById('zoomControls');
+    zc.hidden = (nav.level === 'city');
+    document.getElementById('btnZoomOut').disabled = (nav.level === 'country');
+    document.getElementById('btnZoomIn').disabled = !topEnterable();
+  }
+
+  // ¿Qué "hacer zoom in" en el nivel actual? El top del ranking.
+  function topEnterable(){
+    if (nav.level === 'country'){
+      const top = Object.keys(DEPTO_DATA)
+        .filter(passesRegion)
+        .map(name => ({ name, v: valueFor(name) }))
+        .filter(d => d.v > 0)
+        .sort((a,b) => b.v - a.v)[0];
+      return top ? top.name : null;
+    }
+    if (nav.level === 'depto'){
+      const cities = CITIES.filter(c => c.depto === nav.depto);
+      const ranked = cities.map(c => ({
+        city: c,
+        count: ESCENARIOS.filter(e => e.cityName === c.name && matchEscFilters(e)).length
+      })).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
+      return ranked[0] ? ranked[0].city : null;
+    }
+    return null;
+  }
+
+  function zoomIn(){
+    const target = topEnterable();
+    if (!target) return;
+    if (nav.level === 'country') enterDepto(target);
+    else if (nav.level === 'depto'){
+      // Si ya hay sub-zoom sobre la ciudad top, entramos a Leaflet
+      if (nav.zoomedCity === target.name) enterCity(target);
+      else tryEnterCity(target);
+    }
+  }
+
+  // ═══ LEAFLET (nivel 3 — ciudad) ═══
+  let lmap = null;
+  let lmarkers = [];
+  function ensureLeaflet(){
+    if (lmap) return;
+    lmap = L.map('leafletMap', {
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: true
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CARTO',
+      maxZoom: 18,
+      subdomains: 'abcd'
+    }).addTo(lmap);
+    L.control.zoom({ position: 'bottomright' }).addTo(lmap);
+  }
+
+  function clearLeafletMarkers(){
+    lmarkers.forEach(m => lmap.removeLayer(m));
+    lmarkers = [];
+  }
+
+  const SVG_DISMISS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+  function buildEscPopup(esc){
+    const color = tipoColor(esc.tipo);
+    const edo = esc.estado;
+    const edoColor = ESTADO_COLORS[edo] || '#64748b';
+    return `
+      <div class="esc-popover">
+        <button type="button" class="naowee-modal__dismiss" aria-label="Cerrar" data-esc-dismiss>${SVG_DISMISS}</button>
+        <header class="esc-popover__head">
+          <div class="esc-popover__ico" style="background:${color}">${tipoIcon(esc.tipo)}</div>
+          <div class="esc-popover__titles">
+            <h4 class="esc-popover__name">${esc.nombre}</h4>
+            <div class="esc-popover__sub">
+              <span class="esc-popover__tipo" style="color:${color}">${esc.tipo}</span>
+              ${esc.car ? '<span class="esc-popover__car">★ CAR</span>' : ''}
+            </div>
+          </div>
+        </header>
+        <div class="esc-popover__grid">
+          <div class="esc-popover__cell">
+            <span class="esc-popover__k">Año</span>
+            <span class="esc-popover__v">${esc.anioConstruccion}</span>
+          </div>
+          <div class="esc-popover__cell">
+            <span class="esc-popover__k">Capacidad</span>
+            <span class="esc-popover__v">${esc.capacidad.toLocaleString('es-CO')}</span>
+          </div>
+          <div class="esc-popover__cell">
+            <span class="esc-popover__k">Estado</span>
+            <span class="esc-popover__v" style="color:${edoColor}">
+              <span class="esc-popover__dot" style="background:${edoColor}"></span>${edo}
+            </span>
+          </div>
+          <div class="esc-popover__cell">
+            <span class="esc-popover__k">Municipio</span>
+            <span class="esc-popover__v">${esc.cityName}</span>
+          </div>
+        </div>
+        <div class="esc-popover__footer">
+          <button type="button" class="naowee-btn naowee-btn--quiet" data-esc-open="${esc.id}">
+            Ver perfil completo
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ═══ Fotos mock por escenario (picsum.photos con seed determinístico) ═══
+  // Pool curado de fotos de Unsplash por tipo de escenario. Son IDs públicos y
+  // estables; se consumen con params ?w= y ?h= para generar thumb y full.
+  const TIPO_PHOTO_IDS = {
+    'Cancha múltiple': [
+      '1546519638-68e109498ffc', // baloncesto cancha
+      '1575361204480-aadea25e6e68', // basket indoor
+      '1518608774889-b04d2abe7702', // volleyball court
+      '1599577180579-6c1fa33a4c3b', // futsal indoor
+      '1574623452334-1e0ac2b3ccb4'  // polideportivo
+    ],
+    'Piscina': [
+      '1530549387789-4c1017266635', // piscina olímpica
+      '1576013551627-0cc20b96c2a7', // piscina carriles
+      '1519315901367-f34ff9154487', // pool aerial
+      '1540206395-68808572332f', // pool blue
+      '1571902943202-507ec2618e8f'  // pool lanes top
+    ],
+    'Coliseo': [
+      '1574629810360-7efbbe195018', // coliseo basket
+      '1504450758481-7338eba7524a', // arena indoor
+      '1553627220-92f0446b6a7f', // arena seats
+      '1574629810360-7efbbe195018', // coliseo basket (repetido como fill)
+      '1518604666860-9ed391f76460'  // indoor stadium
+    ],
+    'Estadio': [
+      '1522778119026-d647f0596c20', // estadio fútbol aerial
+      '1459865264687-595d652de67e', // estadio interior
+      '1508098682722-e99c43a406b2', // cancha fútbol
+      '1556056504-5c7696c4c28d', // soccer stadium night
+      '1543326727-cf6c39e8f84c'  // stadium crowd
+    ],
+    'Pista atlética': [
+      '1552674605-db6ffd4facb5', // running track
+      '1461896836934-ffe607ba8211', // track aerial
+      '1530549387789-4c1017266635', // athletic track (reused)
+      '1541534401786-2077eed87a74', // track straight
+      '1517649763962-0c623066013b'  // running track red
+    ],
+    'Gimnasio': [
+      '1534438327276-14e5300c3a48', // gym equipment
+      '1571902943202-507ec2618e8f', // weights (alt)
+      '1534438327276-14e5300c3a48', // gym (repetido)
+      '1540496905036-5937c10647cc', // gym dumbbells
+      '1581009146145-b5ef050c2e1e'  // fitness room
+    ],
+    'Velódromo': [
+      '1541252260730-0412e8e2108e', // velódromo
+      '1544191696-15693072e0b5', // cycling track
+      '1529156069898-49953e39b3ac', // cycling bank
+      '1517649763962-0c623066013b', // track (fallback)
+      '1506784881475-0b3b86e9dbba'  // cycling
+    ],
+    'Escenario náutico': [
+      '1523580494863-6f3031224c94', // rowing boats
+      '1534841090574-cba2d662b62e', // lake boats
+      '1600880292089-90a7e086ee0c', // kayak
+      '1502082553048-f009c37129b9', // nautical dock
+      '1523451126808-6ce65b9028a8'  // sailing
+    ],
+    'Patinódromo': [
+      '1517649763962-0c623066013b', // track (reuse)
+      '1544717305-996b815c338c', // skate rink
+      '1522163182402-834f871fd851', // roller
+      '1571902943202-507ec2618e8f', // fallback
+      '1517649763962-0c623066013b'  // fallback
+    ],
+    'Villa Olímpica': [
+      '1461896836934-ffe607ba8211', // estadio aerial (olympic vibe)
+      '1574629810360-7efbbe195018', // arena
+      '1571902943202-507ec2618e8f', // complex
+      '1461896836934-ffe607ba8211', // reuse
+      '1522778119026-d647f0596c20'  // stadium
+    ],
+    'Complejo deportivo': [
+      '1574629810360-7efbbe195018', // indoor
+      '1518604666860-9ed391f76460', // complex
+      '1571902943202-507ec2618e8f', // sport area
+      '1522778119026-d647f0596c20', // stadium
+      '1461896836934-ffe607ba8211'  // aerial
+    ],
+    'Otro': [
+      '1574629810360-7efbbe195018',
+      '1518604666860-9ed391f76460',
+      '1461896836934-ffe607ba8211',
+      '1571902943202-507ec2618e8f',
+      '1522778119026-d647f0596c20'
+    ]
+  };
+
+  // PRNG determinístico simple para seleccionar un offset por escenario
+  function pickPhotoIds(esc){
+    const ids = TIPO_PHOTO_IDS[esc.tipo] || TIPO_PHOTO_IDS['Otro'];
+    // rotar el pool según el id del escenario para que cada uno tenga un orden único
+    const offset = ((esc.id * 7) % ids.length + ids.length) % ids.length;
+    return [0,1,2,3,4].map(i => ids[(offset + i) % ids.length]);
+  }
+
+  function photosFor(esc){
+    const picks = pickPhotoIds(esc);
+    return picks.map((id, i) => ({
+      thumb: `https://images.unsplash.com/photo-${id}?w=400&h=300&fit=crop&auto=format`,
+      full:  `https://images.unsplash.com/photo-${id}?w=1600&h=1000&fit=crop&auto=format`,
+      alt:   `${esc.nombre} — foto ${i+1}`
+    }));
+  }
+
+  // ═══ Lightbox ═══
+  const lbOverlay = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbCounter = document.getElementById('lbCounter');
+  const lbThumbs = document.getElementById('lbThumbs');
+  let lbPhotos = [];
+  let lbIdx = 0;
+
+  function lbRenderThumbs(){
+    lbThumbs.innerHTML = lbPhotos.map((p, i) => `
+      <button type="button" class="lb-thumb${i===lbIdx?' lb-thumb--active':''}" data-thumb="${i}">
+        <img src="${p.thumb}" alt=""/>
+      </button>
+    `).join('');
+    lbThumbs.querySelectorAll('[data-thumb]').forEach(b => {
+      b.addEventListener('click', () => lbSetIndex(parseInt(b.dataset.thumb, 10)));
+    });
+  }
+  function lbSetIndex(i){
+    const n = lbPhotos.length;
+    lbIdx = ((i % n) + n) % n;
+    lbImg.src = lbPhotos[lbIdx].full;
+    lbImg.alt = lbPhotos[lbIdx].alt;
+    lbCounter.textContent = (lbIdx + 1) + ' / ' + n;
+    // Refresh active thumb
+    lbThumbs.querySelectorAll('.lb-thumb').forEach((t, j) => t.classList.toggle('lb-thumb--active', j === lbIdx));
+    const active = lbThumbs.querySelector('.lb-thumb--active');
+    if (active) active.scrollIntoView({ block:'nearest', inline:'center', behavior:'smooth' });
+  }
+  function lbOpen(photos, idx){
+    lbPhotos = photos;
+    lbIdx = idx || 0;
+    lbRenderThumbs();
+    lbSetIndex(lbIdx);
+    lbOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function lbClose(){
+    lbOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('lbClose').addEventListener('click', lbClose);
+  document.getElementById('lbPrev').addEventListener('click', () => lbSetIndex(lbIdx - 1));
+  document.getElementById('lbNext').addEventListener('click', () => lbSetIndex(lbIdx + 1));
+  lbOverlay.addEventListener('click', (e) => {
+    if (e.target === lbOverlay || e.target.id === 'lbMain') lbClose();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!lbOverlay.classList.contains('open')) return;
+    if (e.key === 'Escape') lbClose();
+    else if (e.key === 'ArrowLeft') lbSetIndex(lbIdx - 1);
+    else if (e.key === 'ArrowRight') lbSetIndex(lbIdx + 1);
+  });
+
+  // ═══ Side panel: ficha técnica del escenario ═══
+  function openDetailPanel(esc){
+    activeEsc = esc;
+    document.getElementById('rankCard').hidden = true;
+    const panel = document.getElementById('detailPanel');
+    panel.hidden = false;
+    renderDetailPanel(esc, 'ficha');
+    if (lmap) lmap.closePopup();
+  }
+
+  function closeDetailPanel(){
+    activeEsc = null;
+    document.getElementById('detailPanel').hidden = true;
+    document.getElementById('rankCard').hidden = false;
+  }
+
+  // Solo actualiza el área de contenido (tabs bar se queda intacta para
+  // que el indicador animado pueda deslizarse entre selecciones)
+  function renderDetailTabContent(esc, tab){
+    const panel = document.getElementById('detailPanel');
+    const content = panel.querySelector('.detail-panel__content');
+    if (!content) return;
+    content.innerHTML =
+      tab === 'ficha'      ? renderFichaTab(esc) :
+      tab === 'historial'  ? renderHistorialTab(esc) :
+      tab === 'documentos' ? renderDocumentosTab(esc) : '';
+    // Re-bind listeners específicos del contenido que se regenera
+    bindContentListeners(panel, esc);
+  }
+
+  function bindContentListeners(panel, esc){
+    const photos = photosFor(esc);
+    // Carrusel en tab "Información general" → thumbnail click abre lightbox
+    panel.querySelectorAll('.detail-gallery__item').forEach((item, i) => {
+      item.addEventListener('click', () => lbOpen(photos, i));
+    });
+    // Flechas del carrusel
+    const track = panel.querySelector('.detail-gallery__track');
+    if (track){
+      panel.querySelector('.detail-gallery__nav--prev')?.addEventListener('click', () => {
+        track.scrollBy({ left:-200, behavior:'smooth' });
+      });
+      panel.querySelector('.detail-gallery__nav--next')?.addEventListener('click', () => {
+        track.scrollBy({ left:200, behavior:'smooth' });
+      });
+    }
+  }
+
+  function renderDetailPanel(esc, tab){
+    const color = tipoColor(esc.tipo);
+    const photos = photosFor(esc);
+    const panel = document.getElementById('detailPanel');
+    panel.innerHTML = `
+      <div class="detail-panel__hero" data-hero-photo>
+        <img src="${photos[0].thumb}" alt="${photos[0].alt}"/>
+        <button type="button" class="naowee-modal__dismiss" aria-label="Cerrar" data-detail-close>${SVG_DISMISS}</button>
+      </div>
+      <div class="detail-panel__head">
+        <div class="detail-panel__tipo-badge" style="background:${color}">
+          ${tipoIcon(esc.tipo)}<span>${esc.tipo}</span>
+        </div>
+        <h3 class="detail-panel__name">${esc.nombre}</h3>
+        <div class="detail-panel__sub">
+          <span>${esc.cityName}, ${esc.depto}</span>
+          ${esc.car ? '<span class="detail-panel__car-chip">★ CAR</span>' : ''}
+        </div>
+      </div>
+      <div class="naowee-tabs naowee-tabs--proportional naowee-tabs--animated" role="tablist" data-naowee-tabs>
+        <button type="button" class="naowee-tab${tab==='ficha'?' naowee-tab--selected':''}" data-naowee-tab data-tab="ficha" role="tab">Información general</button>
+        <button type="button" class="naowee-tab${tab==='documentos'?' naowee-tab--selected':''}" data-naowee-tab data-tab="documentos" role="tab">Documentación</button>
+        <button type="button" class="naowee-tab${tab==='historial'?' naowee-tab--selected':''}" data-naowee-tab data-tab="historial" role="tab">Historial</button>
+        <span class="naowee-tabs__indicator" aria-hidden="true"></span>
+      </div>
+      <div class="detail-panel__content">
+        ${tab === 'ficha'      ? renderFichaTab(esc) : ''}
+        ${tab === 'historial'  ? renderHistorialTab(esc) : ''}
+        ${tab === 'documentos' ? renderDocumentosTab(esc) : ''}
+      </div>
+    `;
+    panel.querySelector('[data-detail-close]').addEventListener('click', closeDetailPanel);
+    // Init tabs animados (shared/tabs.js gestiona --selected + indicador)
+    const tabsEl = panel.querySelector('[data-naowee-tabs]');
+    if (tabsEl && window.NaoweeTabs){
+      window.NaoweeTabs.initOne(tabsEl);
+      tabsEl.addEventListener('naowee-tab:change', (e) => {
+        const nextTab = e.detail.tab.dataset.tab;
+        if (nextTab) renderDetailTabContent(esc, nextTab);
+      });
+    }
+    // Hero click → abrir lightbox en foto 0 (hero vive fuera de .detail-panel__content)
+    const hero = panel.querySelector('[data-hero-photo]');
+    if (hero){
+      hero.addEventListener('click', (e) => {
+        if (e.target.closest('[data-detail-close]')) return;
+        lbOpen(photos, 0);
+      });
+    }
+    // Listeners del contenido (carrusel, etc.) — también se re-bindan en cada tab switch
+    bindContentListeners(panel, esc);
+  }
+
+  // Generadores mock derivados determinísticamente del id
+  function mockFromEsc(esc){
+    const seed = hashStr(esc.nombre + esc.id);
+    const r = (offset) => ((seed >> (offset*3)) & 0xff) / 255;
+    const TIPOS_PROPIETARIO = ['Municipio','Departamento','Nación','Privado'];
+    const TIPOS_TENENCIA = ['Propiedad','Comodato','Arrendamiento','Concesión'];
+    const ZONAS = ['Urbana','Rural'];
+    const CORREGIMIENTOS = ['—','Centro','Norte','Sur'];
+    const NOMBRES_RESP = ['Carlos Ramírez','Laura Martínez','Andrés Gómez','Sofía Torres','María López','Juan Pérez','Ana Rodríguez','Pedro Díaz'];
+    const STREETS = ['Calle 72','Carrera 15','Avenida El Dorado','Calle 100','Carrera 7','Calle 80','Avenida 68'];
+    const street = STREETS[Math.floor(r(0) * STREETS.length)];
+    const num1 = Math.floor(r(1) * 99) + 1;
+    const num2 = Math.floor(r(2) * 99) + 1;
+    const responsable = NOMBRES_RESP[Math.floor(r(3) * NOMBRES_RESP.length)];
+    const tipoPropietario = TIPOS_PROPIETARIO[Math.floor(r(4) * TIPOS_PROPIETARIO.length)];
+    const tipoTenencia = TIPOS_TENENCIA[Math.floor(r(5) * TIPOS_TENENCIA.length)];
+    const zona = ZONAS[Math.floor(r(6) * ZONAS.length)];
+    const corregimiento = CORREGIMIENTOS[Math.floor(r(7) * CORREGIMIENTOS.length)];
+    const area = Math.round(esc.capacidad * 2 + 300);
+    const areaUtil = Math.round(area * 0.7);
+    const tel = '3' + String(Math.floor(r(8) * 1000000000)).padStart(9, '0').slice(0,9);
+    const correo = responsable.toLowerCase().replace(' ','.') + '@gov.co';
+    return {
+      direccion: `${street} # ${num1}-${num2}`,
+      zona, corregimiento,
+      catastral: String(Math.floor(r(9) * 1e29)).padStart(30,'0').slice(0,30),
+      entidadPropietaria: `Instituto Municipal de Deporte de ${esc.cityName}`,
+      tipoPropietario,
+      entidadAdmin: `Alcaldía de ${esc.cityName}`,
+      tipoTenencia,
+      responsable, tel, correo,
+      area, areaUtil
+    };
+  }
+
+  function renderFichaTab(esc){
+    const m = mockFromEsc(esc);
+    const edoColor = ESTADO_COLORS[esc.estado] || '#64748b';
+    const photos = photosFor(esc);
+    return `
+      <div class="detail-section">
+        <h3 class="detail-section__title">Fotografías</h3>
+        <div class="detail-gallery">
+          <button type="button" class="detail-gallery__nav detail-gallery__nav--prev" aria-label="Anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="detail-gallery__track">
+            ${photos.map((p, i) => `
+              <div class="detail-gallery__item" data-gallery-idx="${i}">
+                <img src="${p.thumb}" alt="${p.alt}" loading="lazy"/>
+              </div>
+            `).join('')}
+          </div>
+          <button type="button" class="detail-gallery__nav detail-gallery__nav--next" aria-label="Siguiente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3 class="detail-section__title">Datos de pre-validación</h3>
+        <div class="ro-grid">
+          <div class="ro-field ro-field--full">
+            <span class="ro-field__label">Nombre del escenario</span>
+            <span class="ro-field__value">${esc.nombre}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Departamento</span>
+            <span class="ro-field__value">${esc.depto}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Municipio</span>
+            <span class="ro-field__value">${esc.cityName}</span>
+          </div>
+          <div class="ro-field ro-field--full">
+            <span class="ro-field__label">Número de registro catastral</span>
+            <span class="ro-field__value">${m.catastral}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Latitud</span>
+            <span class="ro-field__value">${esc.lat.toFixed(4)}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Longitud</span>
+            <span class="ro-field__value">${esc.lon.toFixed(4)}</span>
+          </div>
+          <div class="ro-field ro-field--full">
+            <span class="ro-field__label">Dirección</span>
+            <span class="ro-field__value">${m.direccion}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Corregimiento</span>
+            <span class="ro-field__value">${m.corregimiento}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Zona</span>
+            <span class="ro-field__value">${m.zona}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3 class="detail-section__title">Datos de propiedad</h3>
+        <div class="ro-grid">
+          <div class="ro-field">
+            <span class="ro-field__label">Entidad propietaria</span>
+            <span class="ro-field__value">${m.entidadPropietaria}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Tipo de propietario</span>
+            <span class="ro-field__value">${m.tipoPropietario}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Entidad administradora</span>
+            <span class="ro-field__value">${m.entidadAdmin}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Tipo de tenencia</span>
+            <span class="ro-field__value">${m.tipoTenencia}</span>
+          </div>
+          <div class="ro-field ro-field--full">
+            <span class="ro-field__label">Responsable</span>
+            <span class="ro-field__value">${m.responsable}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Teléfono</span>
+            <span class="ro-field__value">${m.tel}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Correo electrónico</span>
+            <span class="ro-field__value">${m.correo}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3 class="detail-section__title">Datos deportivos</h3>
+        <div class="ro-grid">
+          <div class="ro-field">
+            <span class="ro-field__label">Tipo de escenario</span>
+            <span class="ro-field__value">${esc.tipo}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">CAR</span>
+            <span class="ro-field__value">${esc.car ? 'Sí' : 'No'}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Año de construcción</span>
+            <span class="ro-field__value">${esc.anioConstruccion}</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Capacidad</span>
+            <span class="ro-field__value">${esc.capacidad.toLocaleString('es-CO')} personas</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Área total</span>
+            <span class="ro-field__value">${m.area.toLocaleString('es-CO')} m²</span>
+          </div>
+          <div class="ro-field">
+            <span class="ro-field__label">Área útil</span>
+            <span class="ro-field__value">${m.areaUtil.toLocaleString('es-CO')} m²</span>
+          </div>
+          <div class="ro-field ro-field--full">
+            <span class="ro-field__label">Estado de conservación</span>
+            <span class="ro-field__value" style="color:${edoColor}">
+              <span class="esc-popover__dot" style="background:${edoColor}"></span>${esc.estado}
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHistorialTab(esc){
+    const anio = esc.anioConstruccion;
+    const items = [
+      { date: `${anio}`, title: 'Inauguración', desc: 'Escenario entregado al uso público.', accent:true }
+    ];
+    if (2026 - anio > 15) items.push({ date: `${anio + 15}`, title: 'Remodelación mayor', desc: 'Actualización de superficies y dotación técnica.' });
+    if (2026 - anio > 5) items.push({ date: '2023', title: 'Inspección técnica', desc: `Estado reportado: <strong>${esc.estado}</strong>.` });
+    items.push({ date: '2026', title: 'Registro en SUID', desc: 'Escenario incorporado al Sistema Único de Información Deportiva.' });
+    return `
+      <div class="timeline">
+        ${items.reverse().map((i, idx) => `
+          <div class="timeline-item">
+            <div class="timeline-dot${idx === 0 ? ' timeline-dot--accent' : ''}"></div>
+            <div class="timeline-body">
+              <div class="timeline-title">${i.title}</div>
+              <div class="timeline-date">${i.date}</div>
+              <div class="timeline-desc">${i.desc}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderDocumentosTab(esc){
+    const ICO_PDF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4"/></svg>';
+    const ICO_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>';
+    const ICO_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>';
+    const docs = [
+      { name:'Registro catastral.pdf',     size:'240 KB', ico:ICO_PDF },
+      { name:'Plano arquitectónico.pdf',   size:'1.8 MB', ico:ICO_PDF },
+      { name:'Certificado de uso.pdf',     size:'180 KB', ico:ICO_PDF },
+      { name:'Foto fachada.jpg',           size:'312 KB', ico:ICO_IMG },
+      { name:'Foto interior.jpg',          size:'488 KB', ico:ICO_IMG }
+    ];
+    return `
+      <div class="doc-list">
+        ${docs.map(d => `
+          <a class="doc-item" href="#" onclick="event.preventDefault()">
+            <div class="doc-item__ico">${d.ico}</div>
+            <div class="doc-item__meta">
+              <div class="doc-item__name">${d.name}</div>
+              <div class="doc-item__sub">${d.size}</div>
+            </div>
+            <span class="doc-item__action">${ICO_DOWN}</span>
+          </a>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Lookup de escenarios actualmente visibles en Leaflet (real + sintéticos).
+  // Usado por el handler de "Ver perfil completo" para resolver por id (que en
+  // los sintéticos es string, ej. 'synth-Bello-estadio-0', y no está en ESCENARIOS).
+  const leafletEscIndex = new Map();
+
+  function renderLeafletMarkers(city){
+    if (!lmap) return;
+    clearLeafletMarkers();
+    leafletEscIndex.clear();
+    let escs = ESCENARIOS.filter(e => e.cityName === city.name && matchEscFilters(e));
+    // Si la muestra de 200 no cubre este combo de filtros pero el agregado del
+    // depto dice que hay escenarios, sintetizamos un grupo representativo para
+    // que el usuario pueda ver pines e interactuar (demo-continuidad).
+    if (escs.length === 0){
+      // Para que la lista sea estable entre filtros, sintetizamos un grupo
+      // basado en el agregado del depto SIN estado (depto.car ó depto.total)
+      // y luego aplicamos el filtro de estado post-síntesis. Así, un escenario
+      // CAR + Regular sigue siendo "el mismo" entre los filtros CAR y CAR+Regular.
+      const dData = DEPTO_DATA[city.depto] || {};
+      const baseAgg = state.carOnly ? (dData.car || 0) : (dData.total || 0);
+      if (baseAgg > 0) {
+        escs = synthesizeEscenarios(city, Math.min(6, Math.max(2, Math.round(baseAgg / 8))));
+        // Aplicamos los filtros activos (incluido estado) sobre el set sintetizado
+        if (state.estados.size > 0) escs = escs.filter(e => state.estados.has(e.estado));
+      }
+    }
+    if (escs.length === 0) return;
+    escs.forEach(e => leafletEscIndex.set(String(e.id), e));
+    const latlngs = [];
+    escs.forEach(esc => {
+      const color = tipoColor(esc.tipo);
+      const tailSvg = '<svg class="esc-pin__tail" viewBox="0 0 14 16" preserveAspectRatio="none"><path d="M 7 15 L 1 3 Q 7 6 13 3 Z"/></svg>';
+      const icon = L.divIcon({
+        className: 'leaflet-esc-pin-wrap',
+        html: `<div class="esc-pin ${esc.car ? 'esc-pin--car' : ''}" style="--pin-color:${color}">
+          <div class="esc-pin__body">${tipoIcon(esc.tipo)}</div>
+          ${tailSvg}
+          ${esc.car ? '<div class="esc-pin__star" title="Centro de Alto Rendimiento">★</div>' : ''}
+        </div>`,
+        iconSize: [40, 54],
+        iconAnchor: [20, 50],
+        popupAnchor: [0, -46]
+      });
+      const m = L.marker([esc.lat, esc.lon], { icon }).addTo(lmap);
+      m.bindPopup(buildEscPopup(esc), {
+        maxWidth: 320,
+        minWidth: 280,
+        closeButton: true,
+        autoPanPadding: [20, 20],
+        className: 'esc-popup-wrap'
+      });
+      lmarkers.push(m);
+      latlngs.push([esc.lat, esc.lon]);
+    });
+    if (latlngs.length > 1){
+      lmap.fitBounds(latlngs, { padding: [40, 40], maxZoom: 14, animate: true });
+    } else {
+      lmap.setView(latlngs[0], 14, { animate: true });
+    }
+  }
+
+  function showLeafletLayer(city){
+    ensureLeaflet();
+    const leafletL = document.getElementById('leafletLayer');
+    const svgL = document.getElementById('svgLayer');
+    leafletL.classList.remove('map-layer--hidden');
+    leafletL.setAttribute('aria-hidden','false');
+    svgL.classList.add('map-layer--hidden');
+    // Centrar y renderizar
+    lmap.setView([city.lat, city.lon], 13, { animate: false });
+    setTimeout(() => {
+      lmap.invalidateSize();
+      renderLeafletMarkers(city);
+    }, 300);
+  }
+
+  function hideLeafletLayer(){
+    const leafletL = document.getElementById('leafletLayer');
+    leafletL.classList.add('map-layer--hidden');
+    leafletL.setAttribute('aria-hidden','true');
+  }
+
+  function showSvgLayer(){
+    const svgL = document.getElementById('svgLayer');
+    svgL.classList.remove('map-layer--hidden');
+  }
+
+  // ═══ Ranking ═══
+  function tipoFilterLabel(){
+    if (state.tipoIds.size === 0) return null;
+    if (state.tipoIds.size === 1){
+      const t = TIPOS.find(t => t.id === [...state.tipoIds][0]);
+      return t ? t.label : null;
+    }
+    if (state.tipoIds.size <= 3){
+      return [...state.tipoIds]
+        .map(id => (TIPOS.find(t => t.id === id) || {}).label)
+        .filter(Boolean)
+        .join(' + ');
+    }
+    return `${state.tipoIds.size} tipos`;
+  }
+
+  function rankLabel(){
+    const parts = ['Top departamentos'];
+    const tipoLbl = tipoFilterLabel();
+    if (tipoLbl) parts.push(tipoLbl);
+    if (state.carOnly) parts.push('CAR');
+    if (state.estados.size > 0 && state.estados.size < ESTADOS_CONSERVACION.length){
+      parts.push([...state.estados].join('/'));
+    }
+    return parts.join(' · ');
+  }
+
+  function renderRanking(){
+    document.getElementById('rankTitle').textContent = rankLabel();
+
+    const root = document.getElementById('rankCard');
+    const prev = root.querySelectorAll('.rank-row, .rank-empty');
+    prev.forEach(n => n.remove());
+
+    // Cuando filtras por región, mostramos TODOS los deptos de esa región (~11 max)
+    // para que el listado sea exhaustivo. Sin región seleccionada, top 10 nacional.
+    const cap = state.region === 'Todas' ? 10 : Infinity;
+    const list = Object.keys(DEPTO_DATA)
+      .filter(passesRegion)
+      .map(name => ({ name, count: valueFor(name), car: DEPTO_DATA[name].car }))
+      .filter(d => d.count > 0)
+      .sort((a,b) => b.count - a.count)
+      .slice(0, cap);
+
+    const legendNode = root.querySelector('.legend-card');
+
+    if (list.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'rank-empty';
+      empty.textContent = 'Sin departamentos con datos para este filtro.';
+      root.insertBefore(empty, legendNode);
+      return;
+    }
+
+    const max = list[0].count;
+    list.forEach((d, i) => {
+      const pct = (d.count / max) * 100;
+      const display = d.count >= 1000 ? (d.count/1000).toFixed(1) + 'k' : d.count;
+      const carBadge = d.car > 0 ? `<span class="rank-car-dot" title="${d.car} CAR">★</span>` : '';
+      const row = document.createElement('div');
+      row.className = 'rank-row';
+      row.dataset.depto = d.name;
+      row.innerHTML = `
+        <span class="rank-idx">${i+1}</span>
+        <div class="rank-body">
+          <div class="rank-name-line">
+            <span class="rank-name">${d.name}</span>
+            ${carBadge}
+          </div>
+          <div class="rank-bar"><div class="rank-bar__fill" style="--bar-pct:${pct}%; --bar-delay:${i * 55}ms"></div></div>
+        </div>
+        <span class="rank-value">${display}</span>
+      `;
+      row.addEventListener('click', () => enterDepto(d.name));
+      root.insertBefore(row, legendNode);
+    });
+  }
+
+  // ═══ Tooltip ═══
+  const tooltipEl = document.getElementById('mapTooltip');
+  const fmt = (n) => n >= 1000 ? n.toLocaleString('es-CO') : String(n);
+
+  function showTooltip(x, y, deptoName){
+    const data = DEPTO_DATA[deptoName];
+    const region = DEPTO_REGION[deptoName] || '—';
+    const passes = passesRegion(deptoName);
+
+    if (!data){
+      tooltipEl.innerHTML = `
+        <div class="map-tooltip__title">${deptoName}</div>
+        <div class="map-tooltip__region">Región ${region}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">Sin datos registrados</div>
+      `;
+    } else if (!passes){
+      tooltipEl.innerHTML = `
+        <div class="map-tooltip__title">${deptoName}</div>
+        <div class="map-tooltip__region">Región ${region}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.55);font-style:italic">Fuera del filtro activo</div>
+      `;
+    } else {
+      const tipoLbl = tipoFilterLabel();
+      const estadoLbl = (state.estados.size > 0 && state.estados.size < ESTADOS_CONSERVACION.length)
+        ? [...state.estados].join('/')
+        : null;
+      const parts = [];
+      if (tipoLbl) parts.push(tipoLbl);
+      if (state.carOnly) parts.push('CAR');
+      if (estadoLbl) parts.push(estadoLbl);
+      const filterLabel = parts.length
+        ? parts.join(' · ')
+        : 'Escenarios registrados';
+      const bigValue = valueFor(deptoName);
+
+      // Top 3 tipos (siempre del total, para dar contexto)
+      const tipos = Object.entries(data.byTipo)
+        .filter(([,v]) => v > 0)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 3);
+      const tipoRows = tipos.map(([key, v]) => {
+        const color = tipoColor(key);
+        return `<div class="map-tooltip__tipo-row">
+          <span class="map-tooltip__tipo-label">
+            <span class="map-tooltip__tipo-swatch" style="background:${color}">${tipoIcon(key)}</span>
+            ${key}
+          </span>
+          <span class="map-tooltip__tipo-count">${fmt(v)}</span>
+        </div>`;
+      }).join('');
+
+      const carRow = (!state.carOnly && data.car > 0) ? `
+        <div class="map-tooltip__row">
+          <span class="map-tooltip__label"><span class="map-tooltip__car-ico">★</span>Centros Alto Rendim.</span>
+          <span class="map-tooltip__value map-tooltip__value--car">${fmt(data.car)}</span>
+        </div>` : '';
+
+      const tiposBlock = (!state.carOnly && tipos.length > 0) ? `
+        <div class="map-tooltip__tipos-title">Top tipos de escenario</div>
+        ${tipoRows}
+      ` : '';
+
+      tooltipEl.innerHTML = `
+        <div class="map-tooltip__title">${deptoName}</div>
+        <div class="map-tooltip__region">Región ${region}</div>
+        <div class="map-tooltip__big">
+          <span class="map-tooltip__big-label">${filterLabel}</span>
+          <span class="map-tooltip__big-value">${fmt(bigValue)}</span>
+        </div>
+        ${carRow}
+        ${tiposBlock}
+        <div class="map-tooltip__hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          Clic para ver el listado
+        </div>
+      `;
+    }
+    tooltipEl.classList.add('visible');
+    tooltipEl.setAttribute('aria-hidden', 'false');
+    positionTooltip(x, y);
+  }
+
+  function positionTooltip(x, y){
+    const rect = tooltipEl.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = x + 16, top = y - 20;
+    if (left + rect.width > vw - 16) left = x - rect.width - 16;
+    if (top < 16) top = 16;
+    if (top + rect.height > vh - 16) top = vh - rect.height - 16;
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+  }
+
+  function hideTooltip(){
+    tooltipEl.classList.remove('visible');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+  }
+
+  // ═══ Drill-down terminal → dashboard filtrado (desde nivel ciudad o ranking) ═══
+  function drillDown(depto, city){
+    const params = new URLSearchParams();
+    params.set('mode', 'multiple');
+    params.set('depto', depto);
+    if (city) params.set('city', city);
+    if (state.carOnly) params.set('car', '1');
+    if (state.tipoIds.size > 0){
+      const keys = [...state.tipoIds]
+        .map(id => (TIPOS.find(t => t.id === id) || {}).key)
+        .filter(Boolean);
+      if (keys.length === 1) params.set('tipo', keys[0]);
+      else if (keys.length > 1) params.set('tipos', keys.join(','));
+    }
+    if (state.region !== 'Todas') params.set('region', state.region);
+    if (state.estados.size > 0) params.set('estados', [...state.estados].join(','));
+    window.location.href = 'escenario-08-dashboard.html?' + params.toString();
+  }
+
+  // ═══ Filter UI wiring ═══
+  function renderRegionMenu(){
+    const menu = document.getElementById('regionMenu');
+    menu.innerHTML = REGIONES.map(r => `
+      <div class="filter-dd__opt${r === state.region ? ' selected' : ''}" data-region="${r}">
+        <span>${r}</span>
+      </div>
+    `).join('');
+    menu.querySelectorAll('.filter-dd__opt').forEach(o => {
+      o.addEventListener('click', () => {
+        state.region = o.dataset.region;
+        document.getElementById('regionLabel').textContent =
+          state.region === 'Todas' ? 'Región' : state.region;
+        document.getElementById('regionDD').classList.remove('open');
+        renderRegionMenu();
+        applyAll();
+      });
+    });
+  }
+
+  function renderEstadoMenu(){
+    const menu = document.getElementById('estadoMenu');
+    menu.innerHTML = ESTADOS_CONSERVACION.map(est => {
+      const on = state.estados.has(est);
+      const color = ESTADO_COLORS[est];
+      return `
+        <div class="filter-dd__opt filter-dd__opt--multi${on ? ' selected' : ''}" data-estado="${est}">
+          <span class="filter-dd__check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="filter-dd__dot" style="background:${color}"></span>
+          <span>${est}</span>
+        </div>
+      `;
+    }).join('');
+    menu.querySelectorAll('.filter-dd__opt').forEach(o => {
+      o.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const est = o.dataset.estado;
+        if (state.estados.has(est)) state.estados.delete(est);
+        else state.estados.add(est);
+        updateEstadoLabel();
+        renderEstadoMenu();
+        applyAll();
+      });
+    });
+  }
+
+  function updateEstadoLabel(){
+    const lbl = document.getElementById('estadoLabel');
+    const n = state.estados.size;
+    if (n === 0 || n === ESTADOS_CONSERVACION.length) lbl.textContent = 'Estado';
+    else if (n === 1) lbl.textContent = [...state.estados][0];
+    else lbl.textContent = `${n} seleccionados`;
+  }
+
+  function renderTipoMenu(){
+    const menu = document.getElementById('tipoMenu');
+    const tiposPickable = TIPOS.filter(t => t.key); // excluimos "Todos": ahora es multi
+    menu.innerHTML = tiposPickable.map(t => {
+      const on = state.tipoIds.has(t.id);
+      const swatch = `<span class="tipo-swatch" style="background:${tipoColor(t.key)};color:#fff">${tipoIcon(t.key)}</span>`;
+      return `
+        <div class="filter-dd__opt filter-dd__opt--multi${on ? ' selected' : ''}" data-tipo="${t.id}">
+          <span class="filter-dd__check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          ${swatch}
+          <span>${t.label}</span>
+        </div>
+      `;
+    }).join('');
+    menu.querySelectorAll('.filter-dd__opt').forEach(o => {
+      o.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = o.dataset.tipo;
+        if (state.tipoIds.has(id)) state.tipoIds.delete(id);
+        else state.tipoIds.add(id);
+        updateTipoLabel();
+        renderTipoMenu();
+        applyAll();
+      });
+    });
+  }
+
+  function updateTipoLabel(){
+    const lbl = document.getElementById('tipoLabel');
+    const n = state.tipoIds.size;
+    if (n === 0) lbl.textContent = 'Tipo';
+    else if (n === 1){
+      const t = TIPOS.find(t => t.id === [...state.tipoIds][0]);
+      lbl.textContent = t ? t.label : 'Tipo';
+    } else {
+      lbl.textContent = `${n} tipos`;
+    }
+  }
+
+  function wireDD(ddId){
+    const dd = document.getElementById(ddId);
+    const trigger = dd.querySelector('.filter-dd__trigger');
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Cierra los otros dropdowns abiertos
+      document.querySelectorAll('.filter-dd.open').forEach(other => {
+        if (other !== dd) other.classList.remove('open');
+      });
+      dd.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!dd.contains(e.target)) dd.classList.remove('open');
+    });
+  }
+
+  // Posiciona el sliding pill sobre el item activo del segment.
+  // El pill está absolute con left:0 dentro del padding-box del segment
+  // (borde interior del border), por lo que solo debemos compensar el border-left.
+  function positionSegmentPill(seg, animate = true){
+    const pill = seg.querySelector('.naowee-segment__pill');
+    const active = seg.querySelector('.naowee-segment__item--active');
+    if (!pill || !active) return;
+    const segRect = seg.getBoundingClientRect();
+    const actRect = active.getBoundingClientRect();
+    const segStyle = getComputedStyle(seg);
+    const borderL = parseFloat(segStyle.borderLeftWidth) || 0;
+    const x = actRect.left - segRect.left - borderL;
+    if (animate){
+      pill.classList.remove('naowee-segment__pill--no-anim');
+      pill.style.setProperty('--segment-pill-x', x + 'px');
+      pill.style.width = actRect.width + 'px';
+    } else {
+      pill.classList.add('naowee-segment__pill--no-anim');
+      pill.style.setProperty('--segment-pill-x', x + 'px');
+      pill.style.width = actRect.width + 'px';
+      // Re-enable transitions after this frame
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pill.classList.remove('naowee-segment__pill--no-anim');
+      }));
+    }
+  }
+
+  function wireCarSegment(){
+    const seg = document.getElementById('carSegment');
+    seg.querySelectorAll('[data-car]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        seg.querySelectorAll('[data-car]').forEach(b => {
+          b.classList.remove('naowee-segment__item--active');
+          b.setAttribute('aria-selected','false');
+        });
+        btn.classList.add('naowee-segment__item--active');
+        btn.setAttribute('aria-selected','true');
+        state.carOnly = btn.dataset.car === 'only';
+        positionSegmentPill(seg, true);
+        applyAll();
+      });
+    });
+    // Primera posición (sin animación) una vez que el layout esté listo.
+    // Usamos setTimeout 0 + rAF para cubrir casos donde rAF está throttled.
+    setTimeout(() => positionSegmentPill(seg, false), 0);
+    requestAnimationFrame(() => positionSegmentPill(seg, false));
+    // Reposicionar al resize
+    window.addEventListener('resize', () => positionSegmentPill(seg, false));
+  }
+
+  function isDefaultFilters(){
+    return state.region === 'Todas' && state.tipoIds.size === 0 && !state.carOnly && state.estados.size === 0;
+  }
+
+  function updateResetBtn(){
+    const btn = document.getElementById('btnResetFilters');
+    const count = (state.region !== 'Todas' ? 1 : 0)
+      + state.tipoIds.size
+      + (state.carOnly ? 1 : 0)
+      + state.estados.size;
+    btn.disabled = count === 0;
+    btn.textContent = count > 0 ? `Limpiar filtros (${count})` : 'Limpiar filtros';
+  }
+
+  function resetFilters(){
+    state.region = 'Todas'; state.carOnly = false;
+    state.tipoIds.clear();
+    state.estados.clear();
+    document.getElementById('regionLabel').textContent = 'Región';
+    const seg = document.getElementById('carSegment');
+    seg.querySelectorAll('[data-car]').forEach(b => {
+      b.classList.toggle('naowee-segment__item--active', b.dataset.car === 'all');
+      b.setAttribute('aria-selected', b.dataset.car === 'all' ? 'true' : 'false');
+    });
+    positionSegmentPill(seg, true);
+    renderRegionMenu();
+    renderTipoMenu();
+    updateTipoLabel();
+    renderEstadoMenu();
+    updateEstadoLabel();
+    applyAll();
+  }
+
+  function applyAll(){
+    applyColors();
+    renderRanking();
+    renderPins();
+    if (nav.level === 'city'){
+      const city = CITIES.find(c => c.name === nav.city);
+      if (city) renderLeafletMarkers(city);
+    }
+    updateResetBtn();
+    renderActiveChips();
+  }
+
+  // ═══ Active filter chips (row 2 of toolbar) ═══
+  function renderActiveChips(){
+    const bar = document.getElementById('activeChips');
+    const chips = [];
+    if (state.region !== 'Todas'){
+      chips.push({ key:'region', label:state.region });
+    }
+    state.tipoIds.forEach(id => {
+      const t = TIPOS.find(t => t.id === id);
+      if (t && t.key){
+        chips.push({ key:'tipo:'+id, label:t.label, color:tipoColor(t.key) });
+      }
+    });
+    if (state.carOnly){
+      chips.push({ key:'car', label:'Solo CAR' });
+    }
+    state.estados.forEach(est => {
+      chips.push({ key:'estado:'+est, label:est, color:ESTADO_COLORS[est] });
+    });
+
+    if (chips.length === 0){
+      bar.hidden = true;
+      bar.innerHTML = '';
+      return;
+    }
+    bar.hidden = false;
+    bar.innerHTML = chips.map(c => {
+      const iconSlot = c.color
+        ? `<span class="naowee-tag__icon" aria-hidden="true"><span class="active-chip__dot" style="background:${c.color}"></span></span>`
+        : '';
+      return `
+        <span class="naowee-tag naowee-tag--small naowee-tag--accent active-chip" data-chip="${c.key}">
+          ${iconSlot}
+          <span>${c.label}</span>
+          <span class="naowee-tag__active-area" role="button" tabindex="0" aria-label="Quitar filtro ${c.label}" data-chip-remove="${c.key}">
+            <span class="naowee-tag__close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </span>
+          </span>
+        </span>`;
+    }).join('');
+
+    bar.querySelectorAll('[data-chip-remove]').forEach(el => {
+      el.addEventListener('click', () => removeFilterChip(el.dataset.chipRemove));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          removeFilterChip(el.dataset.chipRemove);
+        }
+      });
+    });
+  }
+
+  function removeFilterChip(key){
+    if (key === 'region'){
+      state.region = 'Todas';
+      document.getElementById('regionLabel').textContent = 'Región';
+      renderRegionMenu();
+    } else if (key.startsWith('tipo:')){
+      state.tipoIds.delete(key.slice(5));
+      updateTipoLabel();
+      renderTipoMenu();
+    } else if (key === 'car'){
+      state.carOnly = false;
+      const seg = document.getElementById('carSegment');
+      seg.querySelectorAll('[data-car]').forEach(b => {
+        b.classList.toggle('naowee-segment__item--active', b.dataset.car === 'all');
+        b.setAttribute('aria-selected', b.dataset.car === 'all' ? 'true' : 'false');
+      });
+    } else if (key.startsWith('estado:')){
+      state.estados.delete(key.slice(7));
+      updateEstadoLabel();
+      renderEstadoMenu();
+    }
+    applyAll();
+  }
+
+  // ═══ Search (deptos + ciudades) ═══
+  function normalize(s){
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function wireSearch(){
+    const input = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('searchClear');
+    const results = document.getElementById('searchResults');
+    const wrap = document.getElementById('searchWrap');
+    let focusedIdx = -1;
+    let currentItems = [];
+
+    const DEPTO_LIST = [...new Set(Object.values(DEPTO_NAMES))].sort();
+
+    function openMenu(){ results.classList.add('open') }
+    function closeMenu(){ results.classList.remove('open') }
+    function updateHasValue(){
+      wrap.classList.toggle('naowee-searchbox--has-value', !!input.value);
+    }
+
+    function doSearch(q){
+      const nq = normalize(q);
+      updateHasValue();
+      if (!nq){ closeMenu(); return; }
+      const deptoHits = DEPTO_LIST
+        .filter(d => normalize(d).includes(nq))
+        .slice(0, 6)
+        .map(d => ({ kind:'Depto', name:d, depto:d }));
+      const cityHits = CITIES
+        .filter(c => normalize(c.name).includes(nq))
+        .slice(0, 8)
+        .map(c => ({ kind:'Ciudad', name:c.name, depto:c.depto, city:c }));
+      currentItems = [...deptoHits, ...cityHits];
+      focusedIdx = currentItems.length ? 0 : -1;
+
+      if (!currentItems.length){
+        results.innerHTML = '<div class="naowee-searchbox__empty">Sin coincidencias</div>';
+      } else {
+        results.innerHTML = currentItems.map((it, i) => `
+          <div class="naowee-searchbox__item${i === focusedIdx ? ' is-focused' : ''}" role="option" data-idx="${i}">
+            <span class="naowee-searchbox__item__kind">${it.kind}</span>
+            <span class="naowee-searchbox__item__name">${it.name}</span>
+            ${it.kind === 'Ciudad' ? `<span class="naowee-searchbox__item__sub">${it.depto}</span>` : ''}
+          </div>
+        `).join('');
+        results.querySelectorAll('.naowee-searchbox__item').forEach(el => {
+          el.addEventListener('click', () => pickItem(currentItems[+el.dataset.idx]));
+        });
+      }
+      openMenu();
+    }
+
+    function pickItem(it){
+      if (!it) return;
+      input.value = '';
+      updateHasValue();
+      closeMenu();
+      if (it.kind === 'Depto'){
+        enterDepto(it.depto);
+      } else if (it.city){
+        // Al buscar una ciudad saltamos directo al nivel ciudad (Leaflet con calles),
+        // sin pasar por el sub-zoom intermedio que requiere un segundo click.
+        if (nav.level !== 'depto' || nav.depto !== it.depto){
+          enterDepto(it.depto);
+          setTimeout(() => enterCity(it.city), 420);
+        } else {
+          enterCity(it.city);
+        }
+      }
+    }
+
+    input.addEventListener('input', (e) => doSearch(e.target.value));
+    input.addEventListener('focus', (e) => {
+      if (e.target.value) doSearch(e.target.value);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (!results.classList.contains('open')) return;
+      if (e.key === 'ArrowDown'){
+        e.preventDefault();
+        focusedIdx = Math.min(focusedIdx + 1, currentItems.length - 1);
+        refreshFocus();
+      } else if (e.key === 'ArrowUp'){
+        e.preventDefault();
+        focusedIdx = Math.max(focusedIdx - 1, 0);
+        refreshFocus();
+      } else if (e.key === 'Enter'){
+        e.preventDefault();
+        if (focusedIdx >= 0) pickItem(currentItems[focusedIdx]);
+      } else if (e.key === 'Escape'){
+        input.value = ''; closeMenu(); updateHasValue();
+      }
+    });
+    function refreshFocus(){
+      results.querySelectorAll('.naowee-searchbox__item').forEach((el, i) => {
+        el.classList.toggle('is-focused', i === focusedIdx);
+      });
+    }
+    clearBtn.addEventListener('click', () => {
+      input.value = ''; closeMenu(); updateHasValue(); input.focus();
+    });
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) closeMenu();
+    });
+  }
+
+  // ═══ Load SVG + bind events ═══
+  function init(){
+    fetch('shared/colombia-hc.svg')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text() })
+      .then(rawCo => {
+        const container = document.getElementById('mapContainer');
+        container.innerHTML = rawCo;
+        svgLoaded = true;
+        injectBaseSvgStyle();
+        applyColors();
+        resetZoom();
+        renderPins();
+        // Ocultar skeleton con fade-out suave
+        const skel = document.getElementById('mapSkeleton');
+        if (skel){
+          skel.classList.add('is-fading');
+          setTimeout(() => { skel.hidden = true }, 380);
+        }
+
+        let activePath = null;
+
+        container.addEventListener('mouseover', (e) => {
+          const path = e.target.closest('path[id]');
+          if (!path) return;
+          const depto = DEPTO_NAMES[path.id];
+          if (!depto) return;
+          if (activePath && activePath !== path) activePath.classList.remove('is-active');
+          path.classList.add('is-active');
+          activePath = path;
+          showTooltip(e.clientX, e.clientY, depto);
+        });
+
+        container.addEventListener('mousemove', (e) => {
+          if (tooltipEl.classList.contains('visible')) positionTooltip(e.clientX, e.clientY);
+        });
+
+        container.addEventListener('mouseleave', () => {
+          hideTooltip();
+          if (activePath) { activePath.classList.remove('is-active'); activePath = null; }
+        });
+
+        // Click directo al depto en el SVG (solo en vista país): entra al depto
+        container.addEventListener('click', (e) => {
+          // Si venimos de un drag, absorber el click y salir
+          if (dragSuppressClick){ dragSuppressClick = false; return; }
+          const path = e.target.closest('path[id]');
+          if (!path) return;
+          const depto = DEPTO_NAMES[path.id];
+          if (!depto || !passesRegion(depto)) return;
+          if (nav.level === 'country') enterDepto(depto);
+        });
+
+        // ── Drag to pan ── (mueve viewBox.x / viewBox.y mientras arrastras)
+        const svgEl = container.querySelector('svg');
+        container.style.cursor = 'grab';
+        let dragActive = false, dragStart = null;
+        const DRAG_THRESHOLD = 5; // px antes de considerar drag
+        container.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          dragStart = { x:e.clientX, y:e.clientY, vbX:viewBox.x, vbY:viewBox.y, moved:0 };
+          dragActive = false;
+          container.style.cursor = 'grabbing';
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragStart) return;
+          const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+          dragStart.moved = Math.max(dragStart.moved, Math.sqrt(dx*dx + dy*dy));
+          if (dragStart.moved < DRAG_THRESHOLD) return;
+          dragActive = true;
+          // Convertir pixel delta → SVG delta usando scale actual
+          const rect = svgEl.getBoundingClientRect();
+          const sx = viewBox.w / rect.width;
+          const sy = viewBox.h / rect.height;
+          viewBox.x = dragStart.vbX - dx * sx;
+          viewBox.y = dragStart.vbY - dy * sy;
+          if (vbAnimId) { clearTimeout(vbAnimId); vbAnimId = null; }
+          applyViewBox();
+          renderPins();
+        });
+        window.addEventListener('mouseup', () => {
+          if (dragActive){ dragSuppressClick = true; }
+          dragStart = null; dragActive = false;
+          container.style.cursor = 'grab';
+        });
+        // Al soltar el mouse fuera del doc, también reset
+        window.addEventListener('mouseleave', () => {
+          dragStart = null; dragActive = false;
+          container.style.cursor = 'grab';
+        });
+
+        // ── Zoom con gesto de pinch (trackpad) o Ctrl+wheel ──
+        // En macOS, el gesto de pinch del trackpad llega como wheel event con ctrlKey=true.
+        // También aceptamos Ctrl+scroll normal para mouse. El zoom se ancla al punto
+        // bajo el cursor para que el usuario zoomee sobre lo que está mirando.
+        container.addEventListener('wheel', (e) => {
+          if (!svgEl) return;
+          // Solo capturamos si es pinch (ctrlKey) o si usuario hace Ctrl+wheel explícito.
+          // Un scroll normal del trackpad no interfiere con la página.
+          if (!e.ctrlKey && !e.metaKey) return;
+          e.preventDefault();
+          const rect = svgEl.getBoundingClientRect();
+          // Punto del cursor en coords SVG
+          const cx = viewBox.x + ((e.clientX - rect.left) / rect.width) * viewBox.w;
+          const cy = viewBox.y + ((e.clientY - rect.top) / rect.height) * viewBox.h;
+          // deltaY negativo = zoom in (pinch-out), positivo = zoom out
+          const factor = Math.exp(e.deltaY * 0.01);
+          const newW = Math.max(40, Math.min(SVG_W, viewBox.w * factor));
+          const newH = Math.max(40, Math.min(SVG_H, viewBox.h * factor));
+          // Anclar zoom al cursor
+          viewBox.x = cx - ((e.clientX - rect.left) / rect.width) * newW;
+          viewBox.y = cy - ((e.clientY - rect.top) / rect.height) * newH;
+          viewBox.w = newW;
+          viewBox.h = newH;
+          if (vbAnimId) { clearTimeout(vbAnimId); vbAnimId = null; }
+          applyViewBox();
+          renderPins();
+        }, { passive: false });
+
+        // Reposicionar al cambiar tamaño de ventana (recalcula viewBox y pines)
+        window.addEventListener('resize', () => {
+          if (nav.level === 'country') resetZoom();
+          else if (nav.level === 'depto') zoomToDepto(nav.depto);
+          if (lmap) lmap.invalidateSize();
+        });
+      })
+      .catch(err => {
+        console.error('Error cargando mapa:', err);
+        document.getElementById('mapContainer').innerHTML =
+          '<div style="color:var(--accent);font-size:13px">Error al cargar el mapa: ' + err.message + '</div>';
+      });
+  }
+
+  // ═══ Bootstrap ═══
+  renderRegionMenu();
+  renderTipoMenu();
+  updateTipoLabel();
+  renderEstadoMenu();
+  updateEstadoLabel();
+  wireDD('regionDD');
+  wireDD('tipoDD');
+  wireDD('estadoDD');
+  wireSearch();
+  renderActiveChips();
+  wireCarSegment();
+  renderRanking();
+  updateResetBtn();
+  renderBreadcrumb();
+  init();
+
+  document.getElementById('btnResetFilters').addEventListener('click', resetFilters);
+  document.getElementById('btnZoomOut').addEventListener('click', goUp);
+  document.getElementById('btnZoomIn').addEventListener('click', zoomIn);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      if (activeEsc) { closeDetailPanel(); return; }
+      if (nav.level !== 'country'){ e.preventDefault(); goUp(); }
+    }
+  });
+
+  // Popover CTA "Ver perfil completo" → abrir side panel
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-esc-open]');
+    if (btn){
+      e.preventDefault();
+      const rawId = btn.dataset.escOpen;
+      // Los sintéticos tienen id string (ej 'synth-Bello-estadio-0'); los reales
+      // son numéricos. Probamos primero el lookup de Leaflet (incluye ambos),
+      // luego caemos a ESCENARIOS por id numérico.
+      let esc = leafletEscIndex.get(String(rawId));
+      if (!esc){
+        const numId = parseInt(rawId, 10);
+        if (!isNaN(numId)) esc = ESCENARIOS.find(x => x.id === numId);
+      }
+      if (esc) openDetailPanel(esc);
+    }
+    const dismiss = e.target.closest('[data-esc-dismiss]');
+    if (dismiss){
+      e.preventDefault();
+      if (lmap) lmap.closePopup();
+    }
+  });
+
+  // Role dropdown click-outside
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('userChipWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      wrap.classList.remove('is-open');
+      const dd = wrap.querySelector('.role-dropdown');
+      if (dd) dd.classList.remove('open');
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    window.location.href = 'escenario-01-login.html';
+  });
+
+})();
+</script>
+
+</body>
+</html>
