@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID – Georreferenciación (2/3)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/wizard-shell.css"/>
+<link rel="stylesheet" href="shared/transitions.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--naowee-font-family,'Inter',sans-serif);
+  background:var(--naowee-color-background-default,#fff);
+  color:var(--naowee-color-text-primary,#282834);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ═══ MAIN ═══ */
+.auth-main{
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:40px 24px 60px 24px;position:relative;z-index:1;
+}
+.wizard-form{width:100%;max-width:528px;display:flex;flex-direction:column;gap:48px}
+
+/* Title block */
+.wizard-title-block{display:flex;flex-direction:column;gap:56px}
+.wizard-heading{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+.wizard-step{font-size:14px;line-height:18px;color:var(--naowee-color-text-secondary,#646587)}
+.wizard-title{
+  font-size:32px;font-weight:600;line-height:40px;letter-spacing:0;
+  color:var(--naowee-color-text-primary,#282834);
+}
+.wizard-subtitle{font-size:16px;line-height:24px;color:var(--naowee-color-text-secondary,#646587)}
+
+/* Fields */
+.wizard-fields{display:flex;flex-direction:column;gap:24px}
+.wizard-fields__label{
+  font-size:12px;font-weight:600;line-height:16px;letter-spacing:.2px;
+  color:var(--naowee-color-text-disabled,#9c9ebf);text-transform:uppercase;
+}
+.wizard-row{display:flex;gap:16px}
+.wizard-row > *{flex:1;min-width:0}
+
+/* ═══ MAP ═══ */
+.geo-map-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--naowee-color-border-default,#e7e9f3)}
+#geoMap{width:100%;height:220px;background:#f5f6fa}
+.geo-map-fullscreen{
+  position:absolute;top:12px;right:12px;z-index:500;
+  width:32px;height:32px;border-radius:8px;
+  background:#fff;border:1px solid var(--naowee-color-border-default,#e7e9f3);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 6px rgba(40,40,52,.1);transition:background .15s;
+}
+.geo-map-fullscreen:hover{background:#f5f6fa}
+.geo-map-fullscreen svg{width:16px;height:16px;color:var(--naowee-color-text-accent,#d74009)}
+
+/* Map action buttons (row of 2 quiet) */
+.geo-map-actions{display:flex;gap:4px}
+.geo-map-actions .naowee-btn{flex:1;font-size:12px;padding:0 12px}
+.geo-map-actions .naowee-btn svg{width:16px;height:16px}
+
+/* ═══ TEXTFIELD CUSTOM WRAPPERS (with tooltip, number alignment) ═══ */
+.geo-textfield{display:flex;flex-direction:column;width:100%}
+.geo-textfield__label{
+  display:flex;align-items:center;gap:4px;
+  font-size:14px;font-weight:400;line-height:18px;
+  color:var(--naowee-color-text-primary,#282834);padding-bottom:2px;
+}
+.geo-textfield__label .req{color:var(--naowee-color-text-accent,#d74009);margin-left:2px}
+.geo-textfield__tooltip{
+  position:relative;width:16px;height:16px;margin-left:2px;
+  color:var(--naowee-color-text-accent,#d74009);cursor:help;
+  display:flex;align-items:center;justify-content:center;
+}
+.geo-textfield__tooltip svg{width:16px;height:16px}
+.geo-textfield__tooltip-content{
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:#282834;color:#fff;font-size:12px;font-weight:400;line-height:16px;
+  padding:8px 10px;border-radius:6px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;
+  z-index:30;
+}
+.geo-textfield__tooltip-content::after{
+  content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:#282834;
+}
+.geo-textfield__tooltip:hover .geo-textfield__tooltip-content{opacity:1}
+.geo-textfield__input{
+  height:48px;padding:0 12px;
+  background:#fff;border:1px solid var(--naowee-color-interactive-border-idle,#8788ab);
+  border-radius:12px;
+  font:400 14px/18px 'Inter',sans-serif;
+  color:var(--naowee-color-text-primary,#282834);
+  width:100%;outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.geo-textfield__input:focus{
+  border-color:var(--naowee-color-text-accent,#d74009);border-width:2px;padding:0 11px;
+}
+.geo-textfield__input::placeholder{color:var(--naowee-color-text-secondary,#646587)}
+.geo-textfield--number .geo-textfield__input{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Dropdown usa componente .naowee-dropdown del DS directamente */
+
+/* ═══ BUTTON GROUP (Volver + Siguiente) ═══ */
+.wizard-footer{display:flex;justify-content:center}
+.wizard-footer__group{display:flex;gap:8px;width:344px;max-width:100%}
+.wizard-footer__group .naowee-btn{flex:1}
+
+/* Responsive */
+@media(max-width:640px){
+  .wizard-title{font-size:24px;line-height:32px}
+  .wizard-row{flex-direction:column}
+  .wizard-footer__group{width:100%}
+  .wizard-form{gap:32px}
+}
+</style>
+</head>
+<body>
+
+<div class="auth-shell">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="auth-header">
+    <div class="auth-header__logos">
+      <img src="shared/logos/ministerio.svg" alt="Ministerio del Deporte Colombia" class="logo-ministerio"/>
+      <div class="logo-sep"></div>
+      <img src="shared/logos/suid.png" alt="SUID — Sistema Único de Información del Deporte" class="logo-suid"/>
+    </div>
+    <div class="auth-header__actions">
+      ¿Ya tienes una cuenta? <a href="escenario-01-login.html" data-wizard-nav="escenario-01-login.html">Inicia sesión</a>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="auth-main">
+    <form class="wizard-form" id="georForm" novalidate>
+
+      <div class="wizard-title-block">
+        <div class="wizard-heading">
+          <span class="wizard-step">2 de 3</span>
+          <h1 class="wizard-title">Datos de pre-validación</h1>
+          <p class="wizard-subtitle">Completa la información requerida para verificar la unicidad de la sede o escenario.</p>
+        </div>
+
+        <div class="wizard-fields">
+          <div class="wizard-fields__label">GEOREFERENCIACIÓN</div>
+
+          <!-- Map -->
+          <div class="geo-map-wrap">
+            <div id="geoMap"></div>
+            <button type="button" class="geo-map-fullscreen" id="btnFullscreen" aria-label="Pantalla completa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            </button>
+          </div>
+
+          <!-- Map action buttons -->
+          <div class="geo-map-actions">
+            <button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small" id="btnMyLocation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v5M9 13l-2 8M15 13l2 8M9 10h6"/></svg>
+              Marcar mi ubicación actual
+            </button>
+            <button type="button" class="naowee-btn naowee-btn--quiet naowee-btn--small" id="btnClickMap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+              Ubicarme en el mapa
+            </button>
+          </div>
+
+          <!-- Lat + Lon row -->
+          <div class="wizard-row">
+
+            <div class="geo-textfield geo-textfield--number" id="fldLat">
+              <label class="geo-textfield__label" for="lat">
+                Latitud<span class="req">*</span>
+                <span class="geo-textfield__tooltip">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M6 6a2 2 0 0 1 4 0c0 1.5-2 2-2 3M8 11v.5" stroke-linecap="round"/></svg>
+                  <span class="geo-textfield__tooltip-content">Formato decimal. Rango Colombia: -4.23 a 12.53</span>
+                </span>
+              </label>
+              <input
+                type="text"
+                id="lat"
+                class="geo-textfield__input"
+                placeholder="0.0000"
+                inputmode="decimal"
+                autocomplete="off"
+                required
+              />
+              <div class="naowee-helper naowee-helper--negative" id="helpLat" hidden>
+                <div class="naowee-helper__text">
+                  <span class="naowee-helper__badge"><svg viewBox="0 0 12 12" fill="none"><line x1="3" y1="6" x2="9" y2="6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+                  Este campo es obligatorio
+                </div>
+              </div>
+            </div>
+
+            <div class="geo-textfield geo-textfield--number" id="fldLon">
+              <label class="geo-textfield__label" for="lon">
+                Longitud<span class="req">*</span>
+                <span class="geo-textfield__tooltip">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M6 6a2 2 0 0 1 4 0c0 1.5-2 2-2 3M8 11v.5" stroke-linecap="round"/></svg>
+                  <span class="geo-textfield__tooltip-content">Formato decimal. Rango Colombia: -81.73 a -66.87</span>
+                </span>
+              </label>
+              <input
+                type="text"
+                id="lon"
+                class="geo-textfield__input"
+                placeholder="0.0000"
+                inputmode="decimal"
+                autocomplete="off"
+                required
+              />
+              <div class="naowee-helper naowee-helper--negative" id="helpLon" hidden>
+                <div class="naowee-helper__text">
+                  <span class="naowee-helper__badge"><svg viewBox="0 0 12 12" fill="none"><line x1="3" y1="6" x2="9" y2="6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+                  Este campo es obligatorio
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Informative helper: Google Maps link -->
+          <div class="naowee-helper naowee-helper--informative" style="padding-top:0">
+            <div class="naowee-helper__text" style="flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:flex-start;gap:4px">
+                <span class="naowee-helper__badge" style="margin-top:2px"><svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="4" x2="6" y2="6"/><line x1="6" y1="8" x2="6" y2="8.01"/></svg></span>
+                <div>
+                  <div style="font-weight:400;color:var(--naowee-color-text-secondary,#646587)">¿Cómo obtener coordenadas desde Google Maps?</div>
+                  <div style="font-weight:400;color:var(--naowee-color-text-secondary,#646587);padding-top:4px">
+                    Para el registro manual puede dirigirse a <a href="https://www.google.com/maps" target="_blank" rel="noopener" style="color:var(--naowee-color-text-link-idle,#006aff);text-decoration:underline">Google Maps.</a> Ubique el marcador en la ubicación correspondiente, haga clic derecho sobre el icono y seleccione la primera opción.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dirección -->
+          <div class="geo-textfield" id="fldDireccion">
+            <label class="geo-textfield__label" for="direccion">Dirección del escenario<span class="req">*</span></label>
+            <input
+              type="text"
+              id="direccion"
+              class="geo-textfield__input"
+              placeholder="Cl. 6 #No. 16-95, Salgar"
+              minlength="5"
+              maxlength="200"
+              autocomplete="street-address"
+              required
+            />
+            <div class="naowee-helper naowee-helper--negative" id="helpDireccion" hidden>
+              <div class="naowee-helper__text">
+                <span class="naowee-helper__badge"><svg viewBox="0 0 12 12" fill="none"><line x1="3" y1="6" x2="9" y2="6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+                Este campo es obligatorio
+              </div>
+            </div>
+          </div>
+
+          <!-- Corregimiento + Zona row -->
+          <div class="wizard-row">
+
+            <div class="geo-textfield">
+              <label class="geo-textfield__label" for="corregimiento">Corregimiento/Vereda/Barrio</label>
+              <input
+                type="text"
+                id="corregimiento"
+                class="geo-textfield__input"
+                placeholder="Ej: Salgar"
+                maxlength="100"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="naowee-dropdown" id="zonaDD">
+              <label class="naowee-dropdown__label" for="zonaTrigger">Zona <span style="color:var(--naowee-color-text-accent,#d74009)">*</span></label>
+              <button type="button" class="naowee-dropdown__trigger" id="zonaTrigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="naowee-dropdown__placeholder" id="zonaValue">Selecciona</span>
+                <span class="naowee-dropdown__controls">
+                  <span class="naowee-dropdown__chevron">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </span>
+                </span>
+              </button>
+              <div class="naowee-dropdown__menu" role="listbox" id="zonaMenu"></div>
+              <div class="naowee-helper naowee-helper--negative" id="helpZona" hidden>
+                <div class="naowee-helper__text">
+                  <span class="naowee-helper__badge"><svg viewBox="0 0 12 12" fill="none"><line x1="3" y1="6" x2="9" y2="6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+                  Este campo es obligatorio
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer buttons -->
+      <div class="wizard-footer">
+        <div class="wizard-footer__group">
+          <button
+            type="button"
+            class="naowee-btn naowee-btn--mute naowee-btn--large"
+            data-wizard-nav="escenario-04-registrar-prevalidacion.html"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            Volver
+          </button>
+          <button
+            type="submit"
+            class="naowee-btn naowee-btn--loud naowee-btn--large"
+            id="siguienteBtn"
+            disabled
+          >
+            Siguiente
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </form>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+const state = {
+  lat: null,
+  lon: null,
+  direccion: '',
+  corregimiento: '',
+  zona: ''
+};
+
+/* Helper utilities */
+function showHelperError(helperId, fieldId){
+  const el = document.getElementById(helperId);
+  if(el) el.hidden = false;
+  if(fieldId){
+    const f = document.getElementById(fieldId);
+    if(f) f.classList.add('naowee-dropdown--error');
+  }
+}
+function hideHelperError(helperId, fieldId){
+  const el = document.getElementById(helperId);
+  if(el) el.hidden = true;
+  if(fieldId){
+    const f = document.getElementById(fieldId);
+    if(f) f.classList.remove('naowee-dropdown--error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEAFLET MAP (Puerto Colombia default)
+   ═══════════════════════════════════════════════════════════════ */
+const DEFAULT_CENTER = [10.9878, -74.9547]; // Puerto Colombia
+const map = L.map('geoMap', {
+  zoomControl: true,
+  attributionControl: true
+}).setView(DEFAULT_CENTER, 16);
+
+// CartoDB Positron tile (minimal white style, similar to Didi/Uber maps)
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 20,
+  subdomains: 'abcd',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+}).addTo(map);
+
+// Custom marker (orange pin)
+const markerIcon = L.divIcon({
+  className: 'geo-marker',
+  html: '<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 24 16 24s16-12 16-24C32 7.2 24.8 0 16 0z" fill="#d74009"/><circle cx="16" cy="16" r="6" fill="#fff"/></svg>',
+  iconSize: [32, 40],
+  iconAnchor: [16, 40]
+});
+const marker = L.marker(DEFAULT_CENTER, { draggable: true, icon: markerIcon }).addTo(map);
+
+function updateCoords(lat, lon){
+  state.lat = parseFloat(lat.toFixed(6));
+  state.lon = parseFloat(lon.toFixed(6));
+  document.getElementById('lat').value = state.lat;
+  document.getElementById('lon').value = state.lon;
+  validate();
+}
+
+// Drag marker → update inputs
+marker.on('dragend', (e) => {
+  const { lat, lng } = e.target.getLatLng();
+  updateCoords(lat, lng);
+});
+
+// Resize map when page finished loading (fixes tile gray bug)
+setTimeout(() => map.invalidateSize(), 200);
+
+/* ═══════════════════════════════════════════════════════════════
+   MAP ACTIONS
+   ═══════════════════════════════════════════════════════════════ */
+document.getElementById('btnMyLocation').addEventListener('click', () => {
+  if(!navigator.geolocation){
+    alert('Tu navegador no soporta geolocalización');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      map.setView([latitude, longitude], 17);
+      marker.setLatLng([latitude, longitude]);
+      updateCoords(latitude, longitude);
+    },
+    (err) => alert('No pudimos obtener tu ubicación: ' + err.message)
+  );
+});
+
+let pickMode = false;
+const btnPick = document.getElementById('btnClickMap');
+btnPick.addEventListener('click', () => {
+  pickMode = !pickMode;
+  document.getElementById('geoMap').style.cursor = pickMode ? 'crosshair' : '';
+  btnPick.style.outline = pickMode ? '2px solid var(--naowee-color-text-accent,#d74009)' : '';
+});
+map.on('click', (e) => {
+  if(!pickMode) return;
+  marker.setLatLng(e.latlng);
+  updateCoords(e.latlng.lat, e.latlng.lng);
+  pickMode = false;
+  document.getElementById('geoMap').style.cursor = '';
+  btnPick.style.outline = '';
+});
+
+// Fullscreen toggle
+document.getElementById('btnFullscreen').addEventListener('click', () => {
+  const el = document.getElementById('geoMap');
+  if(!document.fullscreenElement){
+    el.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+  setTimeout(() => map.invalidateSize(), 200);
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   MANUAL COORDINATE INPUT (syncs back to marker)
+   ═══════════════════════════════════════════════════════════════ */
+const latInput = document.getElementById('lat');
+const lonInput = document.getElementById('lon');
+
+function sanitizeDecimal(value){
+  // Allow digits, single dot, single leading minus
+  let cleaned = value.replace(/[^0-9.\-]/g, '');
+  cleaned = cleaned.replace(/(?!^)-/g, ''); // only leading minus
+  const parts = cleaned.split('.');
+  if(parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
+  return cleaned;
+}
+
+latInput.addEventListener('input', (e) => {
+  const cleaned = sanitizeDecimal(e.target.value);
+  if(cleaned !== e.target.value) e.target.value = cleaned;
+  const lat = parseFloat(cleaned);
+  if(!isNaN(lat) && lat >= -4.23 && lat <= 12.53){
+    state.lat = lat;
+    hideHelperError('helpLat');
+    if(state.lon != null){
+      marker.setLatLng([lat, state.lon]);
+      map.panTo([lat, state.lon]);
+    }
+  } else {
+    state.lat = null;
+  }
+  validate();
+});
+latInput.addEventListener('blur', () => {
+  if(state.lat == null){ showHelperError('helpLat'); }
+});
+
+lonInput.addEventListener('input', (e) => {
+  const cleaned = sanitizeDecimal(e.target.value);
+  if(cleaned !== e.target.value) e.target.value = cleaned;
+  const lon = parseFloat(cleaned);
+  if(!isNaN(lon) && lon >= -81.73 && lon <= -66.87){
+    state.lon = lon;
+    hideHelperError('helpLon');
+    if(state.lat != null){
+      marker.setLatLng([state.lat, lon]);
+      map.panTo([state.lat, lon]);
+    }
+  } else {
+    state.lon = null;
+  }
+  validate();
+});
+lonInput.addEventListener('blur', () => {
+  if(state.lon == null){ showHelperError('helpLon'); }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   OTHER FIELDS
+   ═══════════════════════════════════════════════════════════════ */
+const direccionInput = document.getElementById('direccion');
+direccionInput.addEventListener('input', (e) => {
+  state.direccion = e.target.value.trim();
+  if(state.direccion.length >= 5){ hideHelperError('helpDireccion'); }
+  validate();
+});
+direccionInput.addEventListener('blur', () => {
+  if(!state.direccion){ showHelperError('helpDireccion'); }
+});
+document.getElementById('corregimiento').addEventListener('input', (e) => {
+  state.corregimiento = e.target.value.trim();
+});
+
+/* Zona dropdown (uses real .naowee-dropdown from DS) */
+const _triggerWired = new WeakSet();
+function initDropdown(ddId, options, onSelect){
+  const dd = document.getElementById(ddId);
+  const trigger = dd.querySelector('.naowee-dropdown__trigger');
+  const menu = dd.querySelector('.naowee-dropdown__menu');
+  const valueSpan = dd.querySelector('.naowee-dropdown__placeholder, .naowee-dropdown__value');
+  menu.innerHTML = '';
+  options.forEach(opt => {
+    const el = document.createElement('div');
+    el.className = 'naowee-dropdown__option';
+    el.setAttribute('role','option');
+    el.textContent = opt;
+    el.addEventListener('click', () => {
+      valueSpan.textContent = opt;
+      valueSpan.className = 'naowee-dropdown__value';
+      menu.querySelectorAll('.naowee-dropdown__option--selected').forEach(o => o.classList.remove('naowee-dropdown__option--selected'));
+      el.classList.add('naowee-dropdown__option--selected');
+      dd.classList.remove('naowee-dropdown--open');
+      trigger.setAttribute('aria-expanded','false');
+      onSelect(opt);
+    });
+    menu.appendChild(el);
+  });
+  if(!_triggerWired.has(trigger)){
+    _triggerWired.add(trigger);
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.naowee-dropdown--open').forEach(o => {
+        if(o !== dd) o.classList.remove('naowee-dropdown--open');
+      });
+      dd.classList.toggle('naowee-dropdown--open');
+      trigger.setAttribute('aria-expanded', dd.classList.contains('naowee-dropdown--open') ? 'true' : 'false');
+    });
+  }
+}
+
+initDropdown('zonaDD', ['Urbana','Rural','Centro'], (val) => {
+  state.zona = val;
+  hideHelperError('helpZona','zonaDD');
+  validate();
+});
+
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.naowee-dropdown')){
+    document.querySelectorAll('.naowee-dropdown--open').forEach(dd => {
+      dd.classList.remove('naowee-dropdown--open');
+      dd.querySelector('.naowee-dropdown__trigger')?.setAttribute('aria-expanded','false');
+    });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   VALIDATE
+   ═══════════════════════════════════════════════════════════════ */
+const siguienteBtn = document.getElementById('siguienteBtn');
+function validate(){
+  const ok = state.lat != null
+    && state.lon != null
+    && state.direccion.length >= 5
+    && state.zona;
+  siguienteBtn.disabled = !ok;
+}
+
+/* Init with default coordinates */
+updateCoords(DEFAULT_CENTER[0], DEFAULT_CENTER[1]);
+
+/* ═══════════════════════════════════════════════════════════════
+   SUBMIT
+   ═══════════════════════════════════════════════════════════════ */
+function validateAllRequired(){
+  let firstInvalid = null;
+  if(state.lat == null){ showHelperError('helpLat'); firstInvalid ||= latInput; }
+  if(state.lon == null){ showHelperError('helpLon'); firstInvalid ||= lonInput; }
+  if(!state.direccion){ showHelperError('helpDireccion'); firstInvalid ||= direccionInput; }
+  if(!state.zona){ showHelperError('helpZona','zonaDD'); firstInvalid ||= document.getElementById('zonaTrigger'); }
+  if(firstInvalid && firstInvalid.focus){
+    firstInvalid.focus();
+    firstInvalid.scrollIntoView?.({block:'center',behavior:'smooth'});
+  }
+  return !firstInvalid;
+}
+
+document.getElementById('georForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if(!validateAllRequired()) return;
+  const url = 'escenario-06-registrar-propiedad.html';
+  if(window.wizardNavigate){
+    window.wizardNavigate(url);
+  } else {
+    window.location.href = url;
+  }
+});
+</script>
+<script src="shared/wizard-shell.js"></script>
+<script src="shared/transitions.js"></script>
+
+<!-- Footer flotante Naowee -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+</body>
+</html>

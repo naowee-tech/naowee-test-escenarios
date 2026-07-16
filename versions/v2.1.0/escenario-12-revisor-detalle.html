@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID – Detalle de registro (Revisor)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/shell.css"/>
+<script src="shared/sidebar-state.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ESCENARIO 12 — Detalle de registro para el Revisor
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Sidebar logo override */
+.sidebar-logo .sb-logo-img{height:40px;width:auto;display:block;flex-shrink:0}
+.sidebar-logo .logo-sep{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.sidebar.collapsed .sb-logo-img,.sidebar.collapsed .sidebar-logo .logo-sep{display:none}
+.sidebar.collapsed .sidebar-logo{justify-content:center}
+.sidebar.collapsed .nav-row{padding:0}
+.sidebar.collapsed .nav-row .active-bar{display:none}
+
+/* Sub-nav items */
+.nav-sub{
+  display:flex;flex-direction:column;gap:2px;
+  padding:0 0 0 52px;
+}
+.nav-sub-item{
+  font-size:13px;font-weight:500;color:var(--text-secondary);
+  padding:8px 12px;border-radius:var(--radius-sm);
+  cursor:pointer;transition:background .12s,color .12s;
+}
+.nav-sub-item:hover{background:#f5f6fa}
+.nav-sub-item.active{color:var(--accent);font-weight:600}
+.sidebar.collapsed .nav-sub{display:none}
+
+/* Avatar en user chip */
+.user-chip{padding:8px 16px 8px 8px;max-width:220px;gap:10px}
+.user-chip .ava-ring{
+  width:40px;height:40px;
+  background:#7c3aed;
+  color:#fff;font-size:13px;font-weight:700;
+}
+.user-chip__chevron svg{transition:transform .2s ease}
+.user-chip:has(.role-dropdown.open) .user-chip__chevron svg,
+.profile-switcher:has(.role-dropdown.open) .user-chip__chevron svg{transform:rotate(180deg)}
+.user-chip .user-name{
+  font-size:14px;font-weight:600;color:var(--text-primary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip .user-role{
+  font-size:12px;color:var(--text-secondary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip__chevron{
+  display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:6px;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--text-secondary);flex-shrink:0;margin-left:4px;
+  transition:background .15s,color .15s;
+}
+.user-chip__chevron:hover{background:#FFEDC7;color:var(--accent)}
+.user-chip__chevron svg{width:14px;height:14px}
+.role-dropdown.open{display:block!important}
+
+/* Profile switcher dropdown */
+.profile-switcher{position:relative}
+.profile-dd{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:100;
+  width:220px;background:#fff;
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(40,40,52,.12);
+  opacity:0;transform:translateY(-6px);pointer-events:none;
+  transition:opacity .2s,transform .2s;
+}
+.profile-switcher.open .profile-dd{
+  opacity:1;transform:translateY(0);pointer-events:auto;
+}
+.profile-dd__item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--text-primary);
+  transition:background .12s;border-radius:12px;
+}
+.profile-dd__item:hover{background:#f5f6fa}
+.profile-dd__item.active{
+  background:#FFEDC7;color:var(--accent);font-weight:600;
+}
+.profile-dd__item .dd-check{
+  width:16px;height:16px;flex-shrink:0;opacity:0;
+}
+.profile-dd__item.active .dd-check{opacity:1;color:var(--accent)}
+
+/* ═══ BREADCRUMB ═══ */
+.breadcrumb{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;color:var(--text-secondary);
+  margin-bottom:8px;
+}
+.breadcrumb a{color:var(--accent);text-decoration:none;font-weight:500}
+.breadcrumb a:hover{text-decoration:underline}
+.breadcrumb__sep{color:var(--text-secondary)}
+
+/* ═══ DETAIL HEADER ═══ */
+.detail-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  margin-bottom:24px;flex-wrap:wrap;
+}
+.detail-header__left{flex:1;min-width:0}
+.detail-header__title{
+  font-size:24px;font-weight:700;line-height:30px;
+  color:var(--text-primary);margin:0 0 4px;
+}
+.detail-header__id{
+  font-size:14px;font-weight:400;color:var(--text-secondary);margin:0;
+}
+.detail-header__actions{
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+
+/* ═══ HERO CARD ═══ */
+.hero-card{
+  background:var(--surface,#fff);
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:16px;
+  padding:24px;
+}
+
+/* ═══ DETAIL CARD ═══ */
+.detail-card{
+  background:var(--surface,#fff);
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:16px;
+  overflow:hidden;
+}
+.detail-card .naowee-tabs{border-radius:0;margin-top:12px}
+.detail-card .tab-panel{padding:24px}
+.detail-card .tab-panel.active{display:block}
+
+/* ═══ TAB SWITCHER ═══ */
+.tab-panel{display:none;animation:fadeInUp .35s cubic-bezier(.4,0,.2,1)}
+.tab-panel.active{display:block}
+
+/* ═══ SECTION ═══ */
+.detail-section{
+  padding-bottom:20px;margin-bottom:20px;
+  border-bottom:1px solid var(--border,#e7e9f3);
+}
+.detail-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.detail-section__title{
+  font-size:12px;font-weight:700;letter-spacing:.5px;
+  color:#9c9ebf;text-transform:uppercase;
+  margin:0 0 20px;padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ═══ READ-ONLY FIELDS ═══ */
+.ro-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px}
+.ro-grid--3{grid-template-columns:1fr 1fr 1fr}
+.ro-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ro-field--full{grid-column:1/-1}
+.ro-field__label{font-size:12px;font-weight:500;color:var(--text-secondary);line-height:16px}
+.ro-field__value{font-size:14px;font-weight:500;color:var(--text-primary);line-height:20px;word-break:break-word}
+
+/* ═══ MAP ═══ */
+.detail-map{
+  width:100%;height:220px;border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);margin-top:16px;margin-bottom:8px;
+}
+
+/* ═══ SUB-ESPACIO CARD ═══ */
+.sub-card{background:#f4f5f9;border-radius:12px;padding:16px 18px;margin-bottom:10px}
+.sub-card__name{font-size:14px;font-weight:600;color:var(--text-primary);margin:0 0 10px}
+.sub-card__grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.sub-card__item{font-size:12px;color:var(--text-secondary)}
+.sub-card__item span{color:var(--text-primary);font-weight:500}
+
+/* ═══ DISCIPLINAS ═══ */
+.disc-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+
+/* ═══ DOC TABLE ═══ */
+.doc-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.doc-table thead tr{background:var(--naowee-color-background-secondary,#f4f5f9)}
+.doc-table thead th{
+  font-size:13px;font-weight:600;color:var(--text-secondary);
+  text-align:left;padding:10px 14px;background:inherit;
+}
+.doc-table thead th:first-child{border-radius:10px 0 0 10px}
+.doc-table thead th:last-child{border-radius:0 10px 10px 0}
+.doc-table tbody td{
+  color:var(--text-primary);padding:16px 14px;vertical-align:middle;
+  border-bottom:1px solid var(--border);
+}
+.doc-table tbody tr:last-child td{border-bottom:none}
+.doc-table tbody tr{transition:background .15s}
+.doc-table tbody tr:hover{background:#fafbfc}
+/* Selected row: vertical bar indicator */
+.doc-table tbody tr[data-doc-row]{position:relative}
+.doc-table tbody tr.doc-row--selected td:first-child::before{
+  content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  background:var(--accent,#d74009);border-radius:0 3px 3px 0;
+}
+
+/* Bulk actions bar */
+.bulk-actions{display:none;gap:12px;margin-bottom:16px}
+.bulk-actions.visible{display:flex}
+
+/* Tooltip on action buttons */
+.rev-action-reject,
+.rev-action-approve{position:relative;overflow:visible!important}
+.rev-action-reject .action-tooltip,
+.rev-action-approve .action-tooltip{
+  position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--text-primary,#282834);color:#fff;font-size:11px;font-weight:600;
+  padding:4px 10px;border-radius:6px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;z-index:10;
+}
+.rev-action-reject .action-tooltip::after,
+.rev-action-approve .action-tooltip::after{
+  content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-bottom-color:var(--text-primary,#282834);
+}
+.rev-action-reject:hover .action-tooltip,
+.rev-action-approve:hover .action-tooltip{opacity:1}
+
+/* Doc action buttons */
+.doc-actions{display:flex;gap:6px;align-items:center}
+
+/* ═══ MAP PIN — estilo unificado con esc-13 (mapa general) ═══ */
+.leaflet-esc-pin-wrap{background:transparent!important;border:none!important;overflow:visible!important}
+.esc-pin{width:40px;height:54px;position:relative;--pin-color:#d74009}
+.esc-pin__body{
+  position:absolute;top:0;left:2px;
+  width:36px;height:36px;
+  background:var(--pin-color);color:#fff;
+  border-radius:9999px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(0,0,0,.26),0 1px 2px rgba(0,0,0,.12);
+  transition:transform .15s cubic-bezier(.4,0,.2,1);
+  z-index:2;
+}
+.esc-pin__body svg{width:18px;height:18px;display:block}
+.esc-pin__tail{
+  position:absolute;left:50%;top:30px;
+  transform:translateX(-50%);
+  width:14px;height:14px;z-index:1;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.22));
+}
+.esc-pin__tail path{fill:var(--pin-color);stroke:none}
+.esc-pin:hover .esc-pin__body{transform:scale(1.1)}
+.esc-pin__star{
+  position:absolute;top:-4px;right:-2px;
+  width:18px;height:18px;
+  background:#ffbf00;color:#fff;
+  border-radius:9999px;border:2px solid #fff;
+  font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+
+/* ═══ NOTA DE RECHAZO — card estilo comentario (read-only + edit modal) ═══ */
+.rev-nota-card{
+  background:#fff;
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:var(--radius-lg,12px);
+  padding:14px 16px;
+  margin-bottom:16px;
+  display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.rev-nota-card[hidden]{display:none}
+.rev-nota-card__head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.rev-nota-card__label{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:600;color:var(--text-primary);
+}
+.rev-nota-card__ico{
+  width:22px;height:22px;border-radius:9999px;flex-shrink:0;
+  background:var(--red-bg,#fff0ee);color:var(--accent,#d74009);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.rev-nota-card__ico svg{width:13px;height:13px}
+.rev-nota-card__edit{
+  padding:4px 10px;font-size:12px;height:28px;flex-shrink:0;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.rev-nota-card__quote{
+  margin:0;padding:10px 14px;
+  background:#f8f8fb;
+  border-left:3px solid var(--accent,#d74009);
+  border-radius:0 var(--radius-md,8px) var(--radius-md,8px) 0;
+  font-size:13px;line-height:1.5;color:var(--text-primary);
+  white-space:pre-wrap;word-break:break-word;font-style:normal;
+}
+.rev-nota-card__foot{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text-secondary);
+}
+.rev-nota-card__avatar{
+  width:20px;height:20px;border-radius:9999px;flex-shrink:0;
+  background:var(--accent,#d74009);color:#fff;
+  font-size:10px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.rev-nota-card__who{font-weight:600;color:var(--text-primary)}
+.rev-nota-card__sep{color:var(--border-dark,#d0d4e6);margin:0 2px}
+.rev-nota-card__log{margin-top:4px}
+.rev-nota-card__log[hidden]{display:none}
+.rev-nota-card__log-toggle{
+  display:inline-flex;align-items:center;gap:4px;
+  list-style:none;cursor:pointer;
+  font-size:11px;font-weight:600;color:var(--text-secondary);
+  padding:4px 8px;border-radius:var(--radius-sm,6px);
+  user-select:none;transition:background .12s,color .12s;
+}
+.rev-nota-card__log-toggle::-webkit-details-marker{display:none}
+.rev-nota-card__log-toggle:hover{background:#f5f6fa;color:var(--text-primary)}
+.rev-nota-card__log-toggle svg{
+  width:12px;height:12px;transition:transform .2s cubic-bezier(.4,0,.2,1);
+}
+.rev-nota-card__log[open] .rev-nota-card__log-toggle svg{transform:rotate(180deg)}
+.rev-nota-card__log-list{
+  margin-top:6px;padding:8px 10px;
+  background:#f8f8fb;border-radius:var(--radius-md,8px);
+  display:flex;flex-direction:column;gap:6px;
+}
+.rev-nota-card__log-item{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:11px;line-height:1.45;color:var(--text-secondary);
+}
+.rev-nota-card__log-item::before{
+  content:'';flex-shrink:0;margin-top:6px;
+  width:6px;height:6px;border-radius:50%;
+  background:var(--border-dark,#d0d4e6);
+}
+.rev-nota-card__log-item strong{color:var(--text-primary);font-weight:600}
+.rev-nota-card__log-item em{color:var(--text-secondary);font-style:normal;opacity:.85}
+
+/* ═══ TIMELINE — unificado con esc-10 (perfil activo) ═══ */
+.timeline{position:relative;padding-left:36px}
+.timeline-item{
+  position:relative;
+  padding-bottom:28px;
+  animation:fadeIn .3s cubic-bezier(.4,0,.2,1) both;
+}
+.timeline-item:last-child{padding-bottom:0}
+.timeline-item::before{
+  content:'';position:absolute;
+  left:-28px;top:24px;
+  width:2px;height:calc(100% - 12px);
+  background:var(--border-dark);
+}
+.timeline-item:last-child::before{display:none}
+.timeline-dot{
+  position:absolute;left:-36px;top:2px;
+  width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.timeline-dot.green{background:var(--green);color:#fff}
+.timeline-dot.blue{background:var(--blue-info,#1f78d1);color:#fff}
+.timeline-dot.orange{background:var(--naranja);color:#fff}
+.timeline-dot.gray{background:#a0a3bd;color:#fff}
+.timeline-dot svg{width:10px;height:10px;color:#fff;stroke:#fff}
+.timeline-content{display:flex;flex-direction:column;gap:2px}
+.timeline-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+.timeline-desc{font-size:13px;font-weight:400;color:var(--text-secondary);line-height:1.4}
+.timeline-date{font-size:12px;font-weight:400;color:#9c9ebf;margin-top:2px;display:flex;align-items:center;gap:4px}
+/* Historial filter count badge (DS segmented toggle) */
+.hist-filters{margin-bottom:20px;height:auto;padding:6px;max-width:100%}
+.hist-filters .naowee-segment__item{height:32px}
+.hist-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:16px;padding:0 5px;margin-left:6px;
+  font-size:10px;font-weight:600;line-height:1;
+  border-radius:var(--radius-full);
+  background:var(--border);color:var(--text-secondary);
+}
+.naowee-segment__item--active .hist-count{
+  background:var(--orange-bg);color:var(--accent);
+}
+
+/* ═══ DIALOG OVERLAY ═══ */
+.dialog-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,43,91,.45);backdrop-filter:blur(2px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+}
+.dialog-overlay.open{display:flex}
+.dialog{
+  width:440px;max-width:100%;background:#fff;border-radius:16px;
+  box-shadow:0 24px 48px rgba(0,0,0,.25);
+  display:flex;flex-direction:column;
+  animation:dialogIn .3s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes dialogIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.dialog__header{
+  padding:24px 24px 16px;display:flex;align-items:flex-start;gap:12px;
+}
+.dialog__icon{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.dialog__icon--success{background:var(--green-bg);color:var(--green)}
+.dialog__icon--danger{background:var(--red-bg,#fff0ee);color:var(--accent)}
+.dialog__icon svg{width:20px;height:20px}
+.dialog__titles{flex:1;min-width:0}
+.dialog__title{font-size:18px;font-weight:700;color:var(--text-primary);margin:0 0 4px}
+.dialog__desc{font-size:14px;color:var(--text-secondary);margin:0;line-height:20px}
+.dialog__body{padding:0 24px 16px;display:flex;flex-direction:column;gap:12px}
+.dialog__footer{
+  padding:16px 24px 24px;display:flex;gap:12px;justify-content:flex-end;
+}
+.dialog__textarea{
+  width:100%;min-height:100px;padding:12px;
+  border:1px solid #8788ab;border-radius:12px;
+  font:400 14px/20px 'Inter',sans-serif;color:var(--text-primary);
+  resize:vertical;outline:none;
+  transition:border-color .15s;
+}
+.dialog__textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(215,64,9,.15)}
+.dialog__textarea::placeholder{color:var(--text-secondary)}
+
+/* ═══ TOAST ═══ */
+/* Toast: positioned naowee-message */
+.toast-wrap{
+  position:fixed;bottom:20px;right:20px;z-index:2000;
+  width:388px;max-width:calc(100vw - 40px);
+  animation:toastIn .5s cubic-bezier(.34,1.56,.64,1);
+  transition:opacity .3s ease,transform .3s ease;
+}
+.toast-wrap--leaving{opacity:0;transform:translateY(12px) scale(.97);pointer-events:none}
+
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(215,64,9,.35)}50%{box-shadow:0 0 0 8px rgba(215,64,9,0)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="burger-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Toggle sidebar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#282834" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <img src="shared/logos/ministerio.svg" alt="Ministerio del Deporte" class="sb-logo-img"/>
+      <div class="logo-sep"></div>
+      <img src="shared/logos/suid.png" alt="SUID" class="sb-logo-img"/>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">GESTION</div>
+
+      <div class="nav-row">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="14 2 14 8 20 8" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">Documentación</span>
+      </div>
+
+      <div class="nav-sub">
+        <div class="nav-sub-item active">Aprobación</div>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="nav-row" id="btnLogout">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="lbl">Cerrar sesion</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+
+    <!-- ═══ TOP HEADER ═══ -->
+    <header class="top-header">
+      <div class="profile-switcher" id="profileSwitcher">
+        <div class="user-chip" id="userChip">
+          <div class="ava">
+            <div class="ava-ring">MA</div>
+            <div class="ava-dot"></div>
+          </div>
+          <div class="user-info">
+            <span class="user-name">María Alejandra Gómez</span>
+            <span class="user-role">Revisor</span>
+          </div>
+          <button class="user-chip__chevron" type="button" aria-label="Cambiar rol" onclick="event.stopPropagation();const p=this.closest('.profile-switcher');p.querySelector('.role-dropdown').classList.toggle('open');p.classList.toggle('open')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+        <div class="role-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:240px;z-index:100;overflow:hidden">
+          <div style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s" onclick="window.location.href='escenario-08-dashboard.html?mode=multiple'" onmouseover="this.style.background='#f5f6fa'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Gestor de escenarios</div><div style="font-size:11px;color:var(--text-secondary)">Registro y gestión de sedes</div></div>
+          </div>
+          <div style="padding:12px 16px;background:var(--naowee-color-interactive-fill-quiet-idle,#FFEDC7);cursor:default;display:flex;align-items:center;gap:10px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--accent)">Revisor</div><div style="font-size:11px;color:var(--text-secondary)">Aprobación de documentación</div></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ PAGE ═══ -->
+    <div class="page">
+
+      <!-- Hero card (breadcrumb + title + actions) -->
+      <div class="hero-card" style="margin-bottom:24px">
+
+        <!-- Back link -->
+        <button class="naowee-btn naowee-btn--link naowee-btn--small" id="btnBack" type="button" style="margin-bottom:16px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+          Regresar a la lista
+        </button>
+
+        <!-- Title + actions -->
+        <div class="detail-header">
+          <div class="detail-header__left">
+            <h1 class="detail-header__title" id="detailTitle">Centro deportivo Prado</h1>
+            <p class="detail-header__id" id="detailId">ID: 10000101010</p>
+          </div>
+          <div class="detail-header__actions" id="headerActions">
+            <button class="naowee-btn naowee-btn--link" id="btnRechazar" type="button" style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Rechazar registro
+            </button>
+            <button class="naowee-btn naowee-btn--loud" id="btnAprobar" type="button" style="background:var(--naowee-color-feedback-fill-positive-loud,#1f8923);border-color:var(--naowee-color-feedback-fill-positive-loud,#1f8923)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><polyline points="20 6 9 17 4 12"/></svg>
+              Aprobar registro
+            </button>
+            <button class="naowee-btn naowee-btn--link" id="btnDesactivar" type="button" style="display:none;color:var(--text-secondary)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+              Desactivar escenario
+            </button>
+          </div>
+        </div>
+
+        <!-- Status banner -->
+        <div class="naowee-message naowee-message--caution" id="statusBanner">
+          <div class="naowee-message__header">
+            <div class="naowee-message__icon" id="statusBannerIcon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="4" x2="8" y2="8"/><line x1="8" y1="11" x2="8" y2="11.01"/></svg>
+            </div>
+            <div class="naowee-message__title" id="statusBannerTitle">Registro pendiente de revision</div>
+          </div>
+          <p class="naowee-message__text" id="statusBannerText">Enviado el 13 de Febrero de 2026</p>
+        </div>
+
+        <!-- Update request banner (solo visible si hay solicitud pendiente del gestor) -->
+        <div id="updateReqBanner" hidden style="margin-top:16px">
+          <div class="naowee-message naowee-message--caution">
+            <div class="naowee-message__header">
+              <div class="naowee-message__icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="8 4 8 8 10.5 9.5"/></svg>
+              </div>
+              <div class="naowee-message__title">Solicitud de actualización pendiente</div>
+            </div>
+            <p class="naowee-message__text" id="updateReqBannerText">El gestor solicitó actualizar este registro.</p>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+              <button class="naowee-btn naowee-btn--link" type="button" id="btnRechazarSolicitud" style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Rechazar solicitud
+              </button>
+              <button class="naowee-btn naowee-btn--loud" type="button" id="btnAprobarSolicitud" style="background:var(--naowee-color-feedback-fill-positive-loud,#1f8923);border-color:var(--naowee-color-feedback-fill-positive-loud,#1f8923)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>
+                Aprobar solicitud
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card container for tabs + content -->
+      <div class="detail-card">
+
+        <!-- Tab bar (DS naowee-tabs + animated indicator) -->
+        <div class="naowee-tabs naowee-tabs--proportional naowee-tabs--animated" data-naowee-tabs>
+          <button class="naowee-tab naowee-tab--selected" data-naowee-tab data-tab="general">Informacion general</button>
+          <button class="naowee-tab" data-naowee-tab data-tab="docs">Documentación</button>
+          <button class="naowee-tab" data-naowee-tab data-tab="historial">Historial</button>
+          <span class="naowee-tabs__indicator" aria-hidden="true"></span>
+        </div>
+
+        <!-- ═══ TAB 1: Informacion general ═══ -->
+        <div class="tab-panel active" id="panelGeneral">
+
+          <!-- Datos de pre-validación -->
+          <div class="detail-section">
+            <h3 class="detail-section__title">Datos de pre-validación</h3>
+            <div class="ro-grid">
+              <div class="ro-field ro-field--full">
+                <span class="ro-field__label">Nombre del escenario</span>
+                <span class="ro-field__value" id="fNombre">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Departamento</span>
+                <span class="ro-field__value" id="fDepartamento">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Municipio</span>
+                <span class="ro-field__value" id="fMunicipio">--</span>
+              </div>
+              <div class="ro-field ro-field--full">
+                <span class="ro-field__label">Número de registro catastral</span>
+                <span class="ro-field__value" id="fCatastral">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Latitud</span>
+                <span class="ro-field__value" id="fLat">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Longitud</span>
+                <span class="ro-field__value" id="fLon">--</span>
+              </div>
+              <div class="ro-field ro-field--full">
+                <span class="ro-field__label">Dirección</span>
+                <span class="ro-field__value" id="fDireccion">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Corregimiento</span>
+                <span class="ro-field__value" id="fCorregimiento">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Zona</span>
+                <span class="ro-field__value" id="fZona">--</span>
+              </div>
+            </div>
+            <div class="detail-map" id="mapContainer"></div>
+          </div>
+
+          <!-- Datos de propiedad -->
+          <div class="detail-section">
+            <h3 class="detail-section__title">Datos de propiedad</h3>
+            <div class="ro-grid">
+              <div class="ro-field">
+                <span class="ro-field__label">Entidad propietaria</span>
+                <span class="ro-field__value" id="fEntidad">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Tipo de propietario</span>
+                <span class="ro-field__value" id="fPropietario">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Entidad administradora</span>
+                <span class="ro-field__value" id="fAdministradora">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Tipo de tenencia</span>
+                <span class="ro-field__value" id="fTenencia">--</span>
+              </div>
+              <div class="ro-field ro-field--full">
+                <span class="ro-field__label">Responsable</span>
+                <span class="ro-field__value" id="fResponsable">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Teléfono</span>
+                <span class="ro-field__value" id="fTelefono">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">Correo electrónico</span>
+                <span class="ro-field__value" id="fCorreo">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Datos deportivos -->
+          <div class="detail-section">
+            <h3 class="detail-section__title">Datos deportivos</h3>
+            <div class="ro-grid">
+              <div class="ro-field">
+                <span class="ro-field__label">Tipo de escenario</span>
+                <span class="ro-field__value" id="fTipoEscenario">--</span>
+              </div>
+              <div class="ro-field">
+                <span class="ro-field__label">CAR</span>
+                <span class="ro-field__value" id="fCar">--</span>
+              </div>
+            </div>
+
+            <!-- Ficha técnica general (renderizada dinámicamente desde el store) -->
+            <div id="fichaComun" style="margin-top:16px"></div>
+
+            <!-- Sub-espacios (renderizados dinámicamente) -->
+            <div id="subEspacios" style="margin-top:16px"></div>
+
+            <!-- Disciplinas (renderizadas dinámicamente) -->
+            <div id="disciplinas" style="margin-top:16px"></div>
+          </div>
+
+        </div>
+
+        <!-- ═══ TAB 2: Documentación ═══ -->
+        <div class="tab-panel" id="panelDocs">
+          <div style="display:grid;grid-template-columns:3fr 1px 2fr;gap:0;align-items:stretch">
+            <!-- Left: Document table with checkboxes + actions -->
+            <div style="padding-right:24px">
+              <h3 class="detail-section__title" style="margin-bottom:12px">Fotografías del escenario</h3>
+
+              <!-- Bulk actions (visible only when 2+ checked) -->
+              <div class="bulk-actions" id="bulkActions">
+                <button class="naowee-btn naowee-btn--mute naowee-btn--small" id="btnBulkReject" type="button" style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:#e53935"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Rechazar documentos (<span id="rejectCount">0</span>)
+                </button>
+                <button class="naowee-btn naowee-btn--mute naowee-btn--small" id="btnBulkApprove" type="button" style="color:#1f8923">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:#1f8923"><polyline points="20 6 9 17 4 12"/></svg>
+                  Aprobar documentos (<span id="approveCount">0</span>)
+                </button>
+              </div>
+
+              <!-- Fecha captura -->
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);margin-bottom:12px">
+                <span>Fecha de captura de fotografías</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <span style="font-weight:500;color:var(--text-primary)">2 de Febrero de 2026</span>
+              </div>
+
+              <table class="doc-table" id="docTable">
+                <thead>
+                  <tr>
+                    <th style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false" id="docCheckAll"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></th>
+                    <th>Documento</th>
+                    <th style="width:110px;text-align:center">Estado</th>
+                    <th style="width:150px;white-space:nowrap">Fecha de cargue</th>
+                  </tr>
+                </thead>
+                <tbody id="docTableBody">
+                <!-- JS renders rows -->
+                <tr data-doc-row="fotoFrontal" data-doc-status="aprobado" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-jpg.svg" alt="JPG"/></div><span>Fotografía frontal del escenario</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small">Aprobado</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Mar. 12, 2026</td>
+                </tr>
+                <tr data-doc-row="fotoPanoramica" data-doc-status="en-revision" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-jpg.svg" alt="JPG"/></div><span>Fotografías de las áreas de práctica</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small">En revisión</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Mar. 2, 2026</td>
+                </tr>
+                <tr data-doc-row="fotoInstalaciones" data-doc-status="rechazado" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-jpg.svg" alt="JPG"/></div><span>Fotografías de instalaciones complementarias</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small">Rechazado</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Feb. 01, 2026</td>
+                </tr>
+                <tr data-doc-row="fotoPanoramicaAerea" data-doc-status="aprobado" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-jpg.svg" alt="JPG"/></div><span>Fotografía panorámica o aérea</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small">Aprobado</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Ene. 02, 2026</td>
+                </tr>
+                <tr data-doc-row="planoEscenario" data-doc-status="aprobado" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-pdf.svg" alt="PDF"/></div><span>Plano del escenario</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small">Aprobado</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Feb. 01, 2026</td>
+                </tr>
+                <tr data-doc-row="planoLocalizacion" data-doc-status="aprobado" style="cursor:pointer">
+                  <td style="width:36px"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="doc-ext-icon"><img src="shared/icons/file-folded-format-pdf.svg" alt="PDF"/></div><span>Plano de localización</span></div></td>
+                  <td style="text-align:center"><span class="naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small">Aprobado</span></td>
+                  <td style="white-space:nowrap;color:var(--text-secondary)">Feb. 01, 2026</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+
+            <!-- Vertical divider -->
+            <div style="background:var(--border,#e7e9f3);width:1px;margin-top:-24px;margin-bottom:-24px"></div>
+
+            <!-- Right: Document detail panel -->
+            <div style="padding-left:24px;position:sticky;top:24px">
+              <!-- Detail: Documento + Estado + Acciones -->
+              <div class="rev-detail-header" style="display:flex;align-items:center;gap:16px;padding:16px 0 18px;border-bottom:1px solid var(--border);margin-bottom:16px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:600;color:var(--text-primary)" id="revDetailName">Fotografía frontal del escenario</div>
+                </div>
+                <span class="naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small" id="revDetailBadge" style="flex-shrink:0">En revisión</span>
+                <div style="display:flex;gap:4px;flex-shrink:0">
+                  <button class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small rev-action-reject" type="button"><span class="action-tooltip">Rechazar</span><img src="shared/icons/action-reject.svg" alt="" style="width:24px;height:24px"/></button>
+                  <button class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small rev-action-approve" type="button"><span class="action-tooltip">Aprobar</span><img src="shared/icons/action-approve.svg" alt="" style="width:24px;height:24px"/></button>
+                </div>
+              </div>
+
+              <!-- Nota de rechazo (read-only · visible solo cuando el doc está rechazado) -->
+              <div class="rev-nota-card" id="revNotaWrap" hidden>
+                <div class="rev-nota-card__head">
+                  <div class="rev-nota-card__label">
+                    <span class="rev-nota-card__ico" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    </span>
+                    <span>Motivo del rechazo</span>
+                  </div>
+                  <button type="button" class="naowee-btn naowee-btn--mute naowee-btn--small rev-nota-card__edit" id="revNotaEditBtn" aria-label="Editar motivo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editar
+                  </button>
+                </div>
+                <blockquote class="rev-nota-card__quote" id="revNotaText">—</blockquote>
+                <div class="rev-nota-card__foot">
+                  <span class="rev-nota-card__avatar" id="revNotaAvatar" aria-hidden="true">R</span>
+                  <span class="rev-nota-card__who" id="revNotaWho">—</span>
+                  <span class="rev-nota-card__sep" aria-hidden="true">·</span>
+                  <span class="rev-nota-card__when" id="revNotaWhen" title=""></span>
+                </div>
+                <details class="rev-nota-card__log" id="revNotaLog" hidden>
+                  <summary class="rev-nota-card__log-toggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    <span id="revNotaLogSummary">Ver historial</span>
+                  </summary>
+                  <div class="rev-nota-card__log-list" id="revNotaLogList"></div>
+                </details>
+              </div>
+
+              <!-- Preview -->
+              <div id="revPreviewBox" style="background:var(--naowee-color-background-secondary,#f4f5f9);border:1px solid var(--border);border-radius:12px;overflow:auto;position:relative;max-height:520px">
+                <div style="position:sticky;top:8px;margin-right:8px;float:right;display:flex;gap:4px;z-index:2">
+                  <button id="revZoomIn" type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" style="background:rgba(255,255,255,.85);backdrop-filter:blur(4px);color:var(--accent)" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                  <button id="revZoomOut" type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" style="background:rgba(255,255,255,.85);backdrop-filter:blur(4px);color:var(--accent)" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                  <button id="revDownload" type="button" class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small" style="background:rgba(255,255,255,.85);backdrop-filter:blur(4px);color:var(--accent)" title="Descargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                </div>
+                <img src="https://picsum.photos/seed/doc-frontal/640/420" alt="Preview" style="width:100%;height:auto;display:block;transform-origin:top left;transition:transform .18s ease" id="revPreviewImg" onerror="this.onerror=null;this.src='shared/empty_state.svg';this.style.padding='40px';this.style.background='#f4f5f9'"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ TAB 3: Historial ═══ -->
+        <div class="tab-panel" id="panelHistorial">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px">
+            <div>
+              <h3 style="font-size:16px;font-weight:600;margin:0">Historial de Eventos</h3>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">Trazabilidad completa del registro</div>
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary)">5 eventos</div>
+          </div>
+
+          <!-- Filter segment (DS naowee-segment) -->
+          <div class="naowee-segment naowee-segment--small hist-filters" role="tablist">
+            <button class="naowee-segment__item naowee-segment__item--active" data-filter="todos" type="button">Todos <span class="hist-count">5</span></button>
+            <button class="naowee-segment__item" data-filter="estado" type="button">Estado <span class="hist-count">2</span></button>
+            <button class="naowee-segment__item" data-filter="documentos" type="button">Documentos <span class="hist-count">1</span></button>
+            <button class="naowee-segment__item" data-filter="asignaciones" type="button">Asignaciones <span class="hist-count">2</span></button>
+          </div>
+
+          <div class="timeline" id="timeline">
+            <div class="timeline-item" data-category="estado" style="animation-delay:.0s">
+              <div class="timeline-dot orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-title">En revisión</div>
+                <div class="timeline-desc">El registro está siendo revisado por el equipo de documentación.</div>
+              </div>
+              <div class="timeline-date"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg> 2026-02-13 14:30</div>
+            </div>
+
+            <div class="timeline-item" data-category="estado" style="animation-delay:.04s">
+              <div class="timeline-dot blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-title">Registro enviado</div>
+                <div class="timeline-desc">Por Juan Hernández</div>
+              </div>
+              <div class="timeline-date"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg> 2026-02-13 10:15</div>
+            </div>
+
+            <div class="timeline-item" data-category="documentos" style="animation-delay:.08s">
+              <div class="timeline-dot green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-title">Documentación cargada</div>
+                <div class="timeline-desc">6 documentos adjuntados · Por Juan Hernández</div>
+              </div>
+              <div class="timeline-date"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg> 2026-02-12 16:00</div>
+            </div>
+
+            <div class="timeline-item" data-category="asignaciones" style="animation-delay:.12s">
+              <div class="timeline-dot blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-title">Revisor asignado</div>
+                <div class="timeline-desc">Ana María López</div>
+              </div>
+              <div class="timeline-date"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg> 2026-02-12</div>
+            </div>
+
+            <div class="timeline-item" data-category="asignaciones" style="animation-delay:.16s">
+              <div class="timeline-dot gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-title">Registro creado</div>
+                <div class="timeline-desc">Se creó el registro del escenario deportivo.</div>
+              </div>
+              <div class="timeline-date"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg> 2026-02-11</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /detail-card -->
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ DIALOG: Aprobación bulk de documentos ═══ -->
+<div class="dialog-overlay" id="dialogBulkApprove">
+  <div class="dialog" style="max-width:440px;text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--green,#1f8923);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 16px">¡Aprobación de documentación!</h3>
+      <p style="font-size:14px;color:var(--text-primary);line-height:22px;margin:0 0 16px">Estás a punto de aprobar varios documentos con esta acción.</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0">Por favor, asegúrate de que todos han sido revisados adecuadamente. Ten en cuenta que esta acción es crítica, ya que afecta la fidelidad de la aprobación y la trazabilidad del proceso. ¿Deseas continuar?</p>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogBulkApproveCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogBulkApproveConfirm" style="background:var(--green,#1f8923);border-color:var(--green,#1f8923);min-width:160px">
+        Sí, aceptar (<span id="bulkApproveDialogCount">0</span>)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazo bulk de documentos ═══ -->
+<div class="dialog-overlay" id="dialogBulkReject">
+  <div class="dialog" style="max-width:440px;text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Rechazo de documentación</h3>
+      <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 12px">¿Deseas continuar?</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px">Estás a punto de rechazar varios documentos con esta acción. Asegúrate de que esta es la acción deseada, ya que se aplicará a todos los documentos seleccionados.</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Nota</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="bulkRejectNota" placeholder="Motivo del rechazo..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogBulkRejectCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogBulkRejectConfirm" style="background:var(--accent,#d74009);border-color:var(--accent,#d74009);min-width:160px">
+        Sí, rechazar (<span id="bulkRejectDialogCount">0</span>)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Confirmar aprobacion ═══ -->
+<div class="dialog-overlay" id="dialogAprobar">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--green,#1f8923);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 16px">Aprobar registro</h3>
+      <p style="font-size:14px;color:var(--text-primary);line-height:22px;margin:0 0 16px">Estás a punto de aprobar este registro.</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0">Una vez aprobado, el estado cambiará a "Activo" y el escenario quedará habilitado en el sistema. ¿Deseas continuar?</p>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogAprobarCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogAprobarConfirm" style="background:var(--green,#1f8923);border-color:var(--green,#1f8923);min-width:160px">
+        Confirmar aprobación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazar / Editar motivo de un documento ═══ -->
+<div class="dialog-overlay" id="dialogRechazarDoc">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px" id="dialogRechazarDocTitle">Rechazar documento</h3>
+      <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 8px" id="dialogRechazarDocName">Documento</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px" id="dialogRechazarDocCopy">Estás a punto de rechazar este documento. Ingresa el motivo para que el gestor pueda corregirlo.</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left" id="dialogRechazarDocField">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Motivo del rechazo</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="dialogRechazarDocMotivo" placeholder="Ej.: la foto no corresponde al escenario de la ubicación registrada."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogRechazarDocCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogRechazarDocConfirm" style="min-width:160px" disabled>
+        Rechazar documento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazar registro ═══ -->
+<div class="dialog-overlay" id="dialogRechazar">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Rechazar registro</h3>
+      <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 12px">¿Deseas continuar?</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px">Estás a punto de rechazar este registro. Ingrese el motivo por el cual se rechaza.</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Nota</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="rechazoMotivo" placeholder="Escriba el motivo del rechazo..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogRechazarCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogRechazarConfirm" style="background:var(--accent,#d74009);border-color:var(--accent,#d74009);min-width:160px">
+        Rechazar registro
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Aprobar solicitud de actualización ═══ -->
+<div class="dialog-overlay" id="dialogAprobarSolicitud">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--green,#1f8923);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Aprobar solicitud de actualización</h3>
+      <p style="font-size:14px;color:var(--text-primary);line-height:22px;margin:0 0 12px">El gestor podrá editar el registro y reenviarlo a revisión.</p>
+      <p id="dialogAprobarSolicitudMotivo" style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0">Motivo: —</p>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogAprobarSolicitudCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogAprobarSolicitudConfirm" style="background:var(--green,#1f8923);border-color:var(--green,#1f8923);min-width:160px">
+        Confirmar aprobación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazar solicitud de actualización ═══ -->
+<div class="dialog-overlay" id="dialogRechazarSolicitud">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Rechazar solicitud de actualización</h3>
+      <p id="dialogRechazarSolicitudMotivo" style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px">Motivo del gestor: —</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Nota del revisor</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="rechazoSolicitudMotivo" placeholder="Explique por qué se rechaza la solicitud..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogRechazarSolicitudCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogRechazarSolicitudConfirm" style="background:var(--accent,#d74009);border-color:var(--accent,#d74009);min-width:160px">
+        Rechazar solicitud
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="shared/escenarios-store.js"></script>
+<script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
+<script>
+(function(){
+  'use strict';
+
+  const Store = window.EscStore;
+
+  // ═══ Profile switcher ═══
+  const ps = document.getElementById('profileSwitcher');
+  document.getElementById('userChip').addEventListener('click', (e) => {
+    e.stopPropagation();
+    ps.classList.toggle('open');
+  });
+
+  // ═══ Estado-driven UI ═══
+  const urlParams = new URLSearchParams(window.location.search);
+  const revIdx = urlParams.get('idx') || '0';
+  const revIdxInt = parseInt(revIdx, 10);
+  // Cargar registro real del store
+  const record = Store ? Store.get(revIdxInt) : null;
+  // El estado real proviene del store; param sólo es fallback
+  const recStatusToParam = { 'revision':'por-revisar', 'activo':'activo', 'rechazado':'rechazado' };
+  const estado = (record && recStatusToParam[record.status]) || urlParams.get('estado') || 'por-revisar';
+
+  /* ═══ Populate dinámico desde el record del store ═══
+     Antes la pantalla mostraba siempre el mismo escenario (Prado hardcoded);
+     ahora cada campo lee del registro seleccionado por idx. */
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : '--';
+  };
+  if (record) {
+    // Header
+    const dt = document.getElementById('detailTitle');
+    const di = document.getElementById('detailId');
+    if (dt) dt.textContent = record.nombre || '--';
+    if (di) di.textContent = 'ID: ' + (record.catastral || '--');
+
+    // Datos de pre-validación
+    setText('fNombre', record.nombre);
+    setText('fDepartamento', record.departamento);
+    setText('fMunicipio', record.municipio);
+    setText('fCatastral', record.catastral);
+    setText('fLat', record.lat);
+    setText('fLon', record.lon);
+    setText('fDireccion', record.direccion);
+    setText('fCorregimiento', record.corregimiento);
+    setText('fZona', record.zona);
+
+    // Datos de propiedad
+    setText('fEntidad', record.entidad);
+    setText('fPropietario', record.propietario);
+    setText('fAdministradora', record.administradora);
+    setText('fTenencia', record.tenencia);
+    setText('fResponsable', record.responsable);
+    setText('fTelefono', record.telefono);
+    setText('fCorreo', record.correoResp);
+
+    // Datos deportivos
+    setText('fTipoEscenario', record.tipoEscenario);
+    setText('fCar', record.car ? 'Sí' : 'No');
+
+    // Ficha técnica general — render dinámico
+    if (record.fichaComun) {
+      const c = record.fichaComun;
+      const fcEl = document.getElementById('fichaComun');
+      if (fcEl) {
+        const items = [
+          ['Área total (m²)', c.areaTotal],
+          ['Área útil (m²)', c.areaUtil],
+          ['Cubierta', c.cubierto],
+          ['Estado general', c.estado],
+          ['Capacidad espectadores', c.capacidad],
+          ['Año de construcción', c.anioCons],
+          ['Año última remodelación', c.anioRemod]
+        ];
+        fcEl.innerHTML =
+          '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Ficha técnica general</div>' +
+          '<div class="ro-grid">' +
+          items.map(([label, v]) =>
+            `<div class="ro-field"><span class="ro-field__label">${label}</span><span class="ro-field__value">${v && v !== '' ? v : '--'}</span></div>`
+          ).join('') +
+          '</div>';
+      }
+    }
+
+    // Disciplinas — render dinámico
+    if (record.disciplinas && record.disciplinas.length > 0) {
+      const dEl = document.getElementById('disciplinas');
+      if (dEl) {
+        dEl.innerHTML =
+          '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Disciplinas</div>' +
+          '<div class="disc-wrap">' +
+          record.disciplinas.map(d => `<span class="naowee-badge naowee-badge--quiet naowee-badge--informative">${d}</span>`).join('') +
+          '</div>';
+      }
+    }
+
+    // Sub-espacios — render dinámico (lista variable según tipo)
+    if (record.subEspacios && record.subEspacios.length > 0) {
+      const seEl = document.getElementById('subEspacios');
+      if (seEl) {
+        const FIELD_LABELS = {
+          longitud:'Longitud (m)', ancho:'Ancho (m)', profMin:'Prof. mínima (m)', profMax:'Prof. máxima (m)',
+          carriles:'Carriles', tipoPiscina:'Tipo de piscina', tratamiento:'Tratamiento', climatizada:'Climatizada',
+          dimLargo:'Largo (m)', dimAncho:'Ancho (m)', superficie:'Superficie',
+          largoCancha:'Largo cancha (m)', anchoCancha:'Ancho cancha (m)', alturaTecho:'Altura techo (m)',
+          largoTerreno:'Largo terreno (m)', anchoTerreno:'Ancho terreno (m)',
+          iluminacionPro:'Iluminación profesional', pistaAtletica:'Pista atlética perimetral'
+        };
+        const cards = record.subEspacios.map(sub => {
+          const ficha = sub.ficha || {};
+          const items = Object.entries(ficha).map(([k,v]) => {
+            const lbl = FIELD_LABELS[k] || k;
+            const val = (typeof v === 'boolean') ? (v ? 'Sí' : 'No') : v;
+            return `<div class="sub-card__item">${lbl}: <span>${val}</span></div>`;
+          }).join('');
+          return `
+            <div class="sub-card">
+              <div class="sub-card__name">${sub.nombre || sub.tipo || 'Sub-espacio'}</div>
+              <div class="sub-card__grid">${items}</div>
+            </div>
+          `;
+        }).join('');
+        seEl.innerHTML =
+          `<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Sub-espacios (${record.subEspacios.length})</div>` +
+          cards;
+      }
+    }
+  }
+
+  // Helper: persistir cambio de estado del registro (delega al store)
+  function persistRevEstado(idx, nuevoEstado, motivo) {
+    if(!Store) return;
+    const i = parseInt(idx, 10);
+    if(nuevoEstado === 'activo') Store.approve(i, Store.REVISOR_NAME);
+    else if(nuevoEstado === 'rechazado') Store.reject(i, Store.REVISOR_NAME, motivo || '');
+  }
+
+  const btnRechazarEl = document.getElementById('btnRechazar');
+  const btnAprobarEl = document.getElementById('btnAprobar');
+  const btnDesactivar = document.getElementById('btnDesactivar');
+  const statusBanner = document.getElementById('statusBanner');
+  const statusBannerIcon = document.getElementById('statusBannerIcon');
+  const statusBannerTitle = document.getElementById('statusBannerTitle');
+  const statusBannerText = document.getElementById('statusBannerText');
+
+  if (estado === 'activo') {
+    // Activo: solo mostrar "Desactivar escenario"
+    btnRechazarEl.style.display = 'none';
+    btnAprobarEl.style.display = 'none';
+    btnDesactivar.style.display = '';
+
+    statusBanner.className = 'naowee-message naowee-message--positive';
+    statusBannerIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>';
+    statusBannerTitle.textContent = 'Escenario activo';
+    statusBannerText.textContent = 'Este escenario fue aprobado y se encuentra activo.';
+
+  } else if (estado === 'rechazado') {
+    // Rechazado: solo mostrar "Aprobar registro"
+    btnRechazarEl.style.display = 'none';
+    btnAprobarEl.style.display = '';
+    btnDesactivar.style.display = 'none';
+
+    statusBanner.className = 'naowee-message naowee-message--negative';
+    statusBannerIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    statusBannerTitle.textContent = 'Registro rechazado';
+    statusBannerText.textContent = 'Este registro fue rechazado. Puede reactivarlo si los documentos han sido corregidos.';
+
+  } else {
+    // Por revisar (default): ambos botones
+    btnDesactivar.style.display = 'none';
+  }
+
+  // ═══ Banner de solicitud de actualización pendiente ═══
+  const updateReqBanner = document.getElementById('updateReqBanner');
+  const updateReqBannerText = document.getElementById('updateReqBannerText');
+  const btnAprobarSolicitud = document.getElementById('btnAprobarSolicitud');
+  const btnRechazarSolicitud = document.getElementById('btnRechazarSolicitud');
+  const dialogAprobarSolicitud = document.getElementById('dialogAprobarSolicitud');
+  const dialogRechazarSolicitud = document.getElementById('dialogRechazarSolicitud');
+
+  function fmtDate(ts){
+    if(!ts) return '';
+    const dt = new Date(ts);
+    return dt.toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'}).replace('.','');
+  }
+
+  if (record && record.updateRequest && record.updateRequest.status === 'pending') {
+    const ur = record.updateRequest;
+    const gestorName = record.actorName || (Store && Store.GESTOR_NAME) || 'Gestor';
+    updateReqBannerText.innerHTML = `<strong>${gestorName}</strong> solicitó actualizar este registro el ${fmtDate(ur.createdAt)}. <strong>Motivo:</strong> ${ur.motivo || '—'}`;
+    updateReqBanner.hidden = false;
+    // Ocultar el status banner base (activo/rechazado) porque la solicitud es más relevante
+    if (statusBanner) statusBanner.style.display = 'none';
+    // Ocultar acciones del registro (aprobar/rechazar registro completo, desactivar)
+    // — la acción ahora es sobre la solicitud, no sobre el registro
+    if (btnDesactivar) btnDesactivar.style.display = 'none';
+    if (btnAprobarEl) btnAprobarEl.style.display = 'none';
+    if (btnRechazarEl) btnRechazarEl.style.display = 'none';
+
+    btnAprobarSolicitud.addEventListener('click', () => {
+      document.getElementById('dialogAprobarSolicitudMotivo').textContent = 'Motivo: ' + (ur.motivo || '—');
+      dialogAprobarSolicitud.classList.add('open');
+    });
+    document.getElementById('dialogAprobarSolicitudCancel').addEventListener('click', () => {
+      dialogAprobarSolicitud.classList.remove('open');
+    });
+    document.getElementById('dialogAprobarSolicitudConfirm').addEventListener('click', () => {
+      dialogAprobarSolicitud.classList.remove('open');
+      if (Store) Store.approveUpdateRequest(revIdxInt, Store.REVISOR_NAME);
+      showToast('Solicitud aprobada — el registro volvió a modo edición', 'success');
+      setTimeout(() => { window.location.href = 'escenario-11-revisor-dashboard.html'; }, 1200);
+    });
+
+    btnRechazarSolicitud.addEventListener('click', () => {
+      document.getElementById('dialogRechazarSolicitudMotivo').textContent = 'Motivo del gestor: ' + (ur.motivo || '—');
+      document.getElementById('rechazoSolicitudMotivo').value = '';
+      dialogRechazarSolicitud.classList.add('open');
+    });
+    document.getElementById('dialogRechazarSolicitudCancel').addEventListener('click', () => {
+      dialogRechazarSolicitud.classList.remove('open');
+      document.getElementById('rechazoSolicitudMotivo').value = '';
+    });
+    document.getElementById('dialogRechazarSolicitudConfirm').addEventListener('click', () => {
+      const nota = (document.getElementById('rechazoSolicitudMotivo')?.value || '').trim();
+      if (!nota) return; // requerido
+      dialogRechazarSolicitud.classList.remove('open');
+      if (Store) Store.rejectUpdateRequest(revIdxInt, Store.REVISOR_NAME, nota);
+      showToast('Solicitud rechazada', 'error');
+      setTimeout(() => { window.location.href = 'escenario-11-revisor-dashboard.html'; }, 1200);
+    });
+
+    // Cerrar dialogs clicando fuera
+    [dialogAprobarSolicitud, dialogRechazarSolicitud].forEach(dlg => {
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.classList.remove('open'); });
+    });
+  }
+
+  // ═══ If rechazado, override doc table to show majority rejected ═══
+  if (estado === 'rechazado') {
+    const rechazadoDocs = {
+      fotoFrontal: 'rechazado',
+      fotoPanoramica: 'rechazado',
+      fotoInstalaciones: 'rechazado',
+      fotoPanoramicaAerea: 'rechazado',
+      planoEscenario: 'aprobado',
+      planoLocalizacion: 'rechazado'
+    };
+    document.querySelectorAll('#docTableBody tr[data-doc-row]').forEach(row => {
+      const key = row.dataset.docRow;
+      const newStatus = rechazadoDocs[key];
+      if (!newStatus) return;
+      row.dataset.docStatus = newStatus;
+      const badge = row.querySelector('.naowee-badge');
+      if (badge) {
+        if (newStatus === 'rechazado') {
+          badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small';
+          badge.textContent = 'Rechazado';
+        } else if (newStatus === 'aprobado') {
+          badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small';
+          badge.textContent = 'Aprobado';
+        }
+      }
+    });
+  }
+
+  // Desactivar escenario handler
+  btnDesactivar.addEventListener('click', () => {
+    showToast('Escenario desactivado', 'error');
+    btnDesactivar.style.display = 'none';
+    statusBanner.className = 'naowee-message naowee-message--caution';
+    statusBannerIcon.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="4" x2="8" y2="8"/><line x1="8" y1="11" x2="8" y2="11.01"/></svg>';
+    statusBannerTitle.textContent = 'Escenario desactivado';
+    statusBannerText.textContent = 'Este escenario ha sido desactivado.';
+  });
+
+  // ═══ Tab switcher (shared/tabs.js maneja --selected + indicator) ═══
+  document.querySelectorAll('[data-naowee-tabs]').forEach(tabsEl => {
+    tabsEl.addEventListener('naowee-tab:change', (e) => {
+      const tab = e.detail.tab.dataset.tab;
+      if (!tab) return;
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const panelId = 'panel' + tab.charAt(0).toUpperCase() + tab.slice(1);
+      const panel = document.getElementById(panelId);
+      if (panel) panel.classList.add('active');
+    });
+  });
+
+  // ═══ Back button ═══
+  document.getElementById('btnBack').addEventListener('click', () => {
+    window.location.href = 'escenario-11-revisor-dashboard.html';
+  });
+
+  // ═══ Map ═══
+  // Mismo sistema de pines que el mapa general (esc-13): color + icono por tipo
+  // + estrella si es CAR. Si el registro no trae "tipo", lo inferimos del nombre.
+  const TIPO_COLORS = {
+    'Cancha múltiple':'#2563eb','Piscina':'#06b6d4','Coliseo':'#a855f7',
+    'Estadio':'#16a34a','Pista atlética':'#e11d48','Gimnasio':'#f59e0b',
+    'Velódromo':'#8b5cf6','Escenario náutico':'#0284c7','Patinódromo':'#ec4899',
+    'Villa Olímpica':'#d74009','Complejo deportivo':'#475569','Otro':'#94a3b8'
+  };
+  const TIPO_ICONS = {
+    'Cancha múltiple':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M12 5v14M3 12h18"/><circle cx="12" cy="12" r="2"/></svg>',
+    'Piscina':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c1.5-1 3-1 4.5 0S9.5 18 11 17s3-1 4.5 0 3 1 4.5 0 2-1 2-1"/><path d="M2 12c1.5-1 3-1 4.5 0S9.5 13 11 12s3-1 4.5 0 3 1 4.5 0 2-1 2-1"/><path d="M6 12V6a2 2 0 0 1 2-2h1M16 12V6a2 2 0 0 0-2-2h-1"/></svg>',
+    'Coliseo':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="10" rx="9" ry="3"/><path d="M3 10v7c0 1.7 4 3 9 3s9-1.3 9-3v-7"/><path d="M7 10.5V19M12 10.5V20M17 10.5V19"/></svg>',
+    'Estadio':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="6"/><path d="M12 6v12M3 12h18"/><circle cx="12" cy="12" r="1.2"/></svg>',
+    'Pista atlética':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="5"/><rect x="5.5" y="10" width="13" height="4" rx="2"/></svg>',
+    'Gimnasio':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="3" height="6" rx="1"/><rect x="18.5" y="9" width="3" height="6" rx="1"/><rect x="6" y="7" width="3" height="10" rx="1"/><rect x="15" y="7" width="3" height="10" rx="1"/><path d="M9 12h6"/></svg>',
+    'Velódromo':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16l4-7h4l4 7M10 9h4M14 9l1 3"/></svg>',
+    'Escenario náutico':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20c1.5-1 3-1 4.5 0S10.5 21 12 20s3-1 4.5 0 3 1 4.5 0"/><path d="M6 17l6-11 6 11z"/><path d="M12 3v3"/></svg>',
+    'Patinódromo':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h3l4 7M13 5l-3 6M10 17h10"/><circle cx="6" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/><circle cx="16" cy="19" r="1.5"/></svg>',
+    'Villa Olímpica':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="4"/><circle cx="16" cy="9" r="4"/><circle cx="12" cy="15" r="4"/></svg>',
+    'Complejo deportivo':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="7" height="12" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/><path d="M5 12h3M5 15h3M5 18h3M15 7h4M15 11h4M15 15h4"/></svg>',
+    'Otro':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>'
+  };
+  function inferTipo(nombre){
+    if(!nombre) return 'Complejo deportivo';
+    const n = nombre.toLowerCase();
+    if(n.includes('piscina') || n.includes('acuático') || n.includes('acuatico')) return 'Piscina';
+    if(n.includes('coliseo')) return 'Coliseo';
+    if(n.includes('estadio')) return 'Estadio';
+    if(n.includes('pista atlética') || n.includes('pista atletica') || n.includes('atletismo')) return 'Pista atlética';
+    if(n.includes('gimnasio') || n.includes('gym')) return 'Gimnasio';
+    if(n.includes('velódromo') || n.includes('velodromo')) return 'Velódromo';
+    if(n.includes('náutico') || n.includes('nautico') || n.includes('marina')) return 'Escenario náutico';
+    if(n.includes('patinódromo') || n.includes('patinodromo') || n.includes('patinaje')) return 'Patinódromo';
+    if(n.includes('villa olímpica') || n.includes('villa olimpica')) return 'Villa Olímpica';
+    if(n.includes('cancha') || n.includes('polideportivo') || n.includes('parque')) return 'Cancha múltiple';
+    if(n.includes('centro deportivo') || n.includes('complejo') || n.includes('unidad deportiva')) return 'Complejo deportivo';
+    return 'Complejo deportivo';
+  }
+  setTimeout(() => {
+    const lat = (record && typeof record.lat === 'number') ? record.lat : 6.2518;
+    const lon = (record && typeof record.lon === 'number') ? record.lon : -75.5636;
+    const map = L.map('mapContainer',{
+      scrollWheelZoom:false, dragging:true, zoomControl:true
+    }).setView([lat, lon], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+    }).addTo(map);
+
+    const tipo = (record && record.tipo) || inferTipo(record && record.nombre);
+    const color = TIPO_COLORS[tipo] || TIPO_COLORS['Otro'];
+    const iconSvg = TIPO_ICONS[tipo] || TIPO_ICONS['Otro'];
+    const isCar = !!(record && record.car);
+    const tailSvg = '<svg class="esc-pin__tail" viewBox="0 0 14 16" preserveAspectRatio="none"><path d="M 7 15 L 1 3 Q 7 6 13 3 Z"/></svg>';
+    const icon = L.divIcon({
+      className:'leaflet-esc-pin-wrap',
+      html:`<div class="esc-pin ${isCar ? 'esc-pin--car' : ''}" style="--pin-color:${color}">
+        <div class="esc-pin__body">${iconSvg}</div>
+        ${tailSvg}
+        ${isCar ? '<div class="esc-pin__star" title="Centro de Alto Rendimiento">★</div>' : ''}
+      </div>`,
+      iconSize:[40,54], iconAnchor:[20,50]
+    });
+    L.marker([lat, lon], {icon}).addTo(map);
+  }, 100);
+
+  // ═══ Toast helper (uses naowee-message from DS) ═══
+  function showToast(message, type){
+    document.querySelectorAll('.toast-wrap').forEach(t => t.remove());
+
+    const isSuccess = type === 'success';
+    const variant = isSuccess ? 'positive' : 'negative';
+    const wrap = document.createElement('div');
+    wrap.className = 'toast-wrap';
+    wrap.innerHTML = `
+      <div class="naowee-message naowee-message--${variant}">
+        <div class="naowee-message__header">
+          <div class="naowee-message__icon">
+            ${isSuccess
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+              : '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="12" y2="8"/></svg>'
+            }
+          </div>
+          <p class="naowee-message__title">${message}</p>
+          <button class="naowee-message__dismiss" onclick="this.closest('.toast-wrap').remove()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+    setTimeout(() => {
+      wrap.classList.add('toast-wrap--leaving');
+      setTimeout(() => wrap.remove(), 400);
+    }, 4000);
+  }
+
+  // ═══ Aprobar registro ═══
+  const dialogAprobar = document.getElementById('dialogAprobar');
+  document.getElementById('btnAprobar').addEventListener('click', () => {
+    dialogAprobar.classList.add('open');
+  });
+  document.getElementById('dialogAprobarCancel').addEventListener('click', () => {
+    dialogAprobar.classList.remove('open');
+  });
+  document.getElementById('dialogAprobarConfirm').addEventListener('click', () => {
+    dialogAprobar.classList.remove('open');
+    persistRevEstado(revIdx, 'activo');
+    showToast('Registro aprobado', 'success');
+    setTimeout(() => { window.location.href = 'escenario-11-revisor-dashboard.html'; }, 1200);
+  });
+
+  // ═══ Rechazar registro ═══
+  const dialogRechazar = document.getElementById('dialogRechazar');
+  document.getElementById('btnRechazar').addEventListener('click', () => {
+    dialogRechazar.classList.add('open');
+  });
+  document.getElementById('dialogRechazarCancel').addEventListener('click', () => {
+    dialogRechazar.classList.remove('open');
+    document.getElementById('rechazoMotivo').value = '';
+  });
+  document.getElementById('dialogRechazarConfirm').addEventListener('click', () => {
+    const motivo = (document.getElementById('rechazoMotivo')?.value || '').trim();
+    dialogRechazar.classList.remove('open');
+    document.getElementById('rechazoMotivo').value = '';
+    persistRevEstado(revIdx, 'rechazado', motivo);
+    showToast('Registro rechazado', 'error');
+    setTimeout(() => { window.location.href = 'escenario-11-revisor-dashboard.html'; }, 1200);
+  });
+
+  // ═══ Per-document approve/reject buttons ═══
+  document.querySelectorAll('.doc-approve-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('tr');
+      const badge = row.querySelector('.naowee-badge');
+      badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small';
+      badge.textContent = 'Aprobado';
+      // Disable both buttons
+      row.querySelectorAll('.doc-approve-btn, .doc-reject-btn').forEach(b => {
+        b.disabled = true;
+        b.style.opacity = '.5';
+      });
+      showToast('Documento aprobado', 'success');
+    });
+  });
+
+  document.querySelectorAll('.doc-reject-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('tr');
+      const badge = row.querySelector('.naowee-badge');
+      badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small';
+      badge.textContent = 'Rechazado';
+      // Disable reject, keep approve active
+      btn.disabled = true;
+      btn.style.opacity = '.5';
+      const approveBtn = row.querySelector('.doc-approve-btn');
+      if(approveBtn){
+        approveBtn.disabled = false;
+        approveBtn.style.opacity = '1';
+      }
+      showToast('Documento rechazado', 'error');
+    });
+  });
+
+  // ═══ Document data for right panel ═══
+  // Usamos picsum.photos con seed determinístico (mismo esquema que esc-13)
+  // para que las imágenes sean estables entre recargas y no fallen como las
+  // URLs directas de Unsplash que rate-limitean intermitente.
+  const picsum = (seed) => `https://picsum.photos/seed/doc-${seed}/640/420`;
+  const DOC_DATA = {
+    fotoFrontal: {
+      nombre: 'Fotografía frontal del escenario',
+      img: picsum('frontal'),
+      nota: 'La imagen cargada no pertenece al escenario marcado en la ubicación registrada.'
+    },
+    fotoPanoramica: {
+      nombre: 'Fotografías de las áreas de práctica',
+      img: picsum('practica'),
+      nota: ''
+    },
+    fotoInstalaciones: {
+      nombre: 'Fotografías de instalaciones complementarias',
+      img: picsum('instalaciones'),
+      nota: 'Las instalaciones no coinciden con el registro declarado.'
+    },
+    fotoPanoramicaAerea: {
+      nombre: 'Fotografía panorámica o aérea',
+      img: picsum('aerea'),
+      nota: ''
+    },
+    planoEscenario: {
+      nombre: 'Plano del escenario',
+      img: picsum('plano-escenario'),
+      nota: ''
+    },
+    planoLocalizacion: {
+      nombre: 'Plano de localización',
+      img: picsum('plano-loc'),
+      nota: ''
+    }
+  };
+
+  const STATUS_MAP = {
+    'aprobado':    { text: 'Aprobado',    cls: 'naowee-badge--positive' },
+    'en-revision': { text: 'En revisión', cls: 'naowee-badge--caution' },
+    'rechazado':   { text: 'Rechazado',   cls: 'naowee-badge--negative' }
+  };
+
+  // ═══ Row selection → update right panel ═══
+  const docRows = document.querySelectorAll('#docTableBody tr[data-doc-row]');
+  const revDetailName = document.getElementById('revDetailName');
+  const revPreviewImg = document.getElementById('revPreviewImg');
+  let revZoomLevel = 1;
+  const REV_ZOOM_MIN = 1;
+  const REV_ZOOM_MAX = 3;
+  const REV_ZOOM_STEP = 0.25;
+  function applyRevZoom(){
+    revPreviewImg.style.transform = 'scale(' + revZoomLevel + ')';
+  }
+  document.getElementById('revZoomIn')?.addEventListener('click', () => {
+    revZoomLevel = Math.min(REV_ZOOM_MAX, +(revZoomLevel + REV_ZOOM_STEP).toFixed(2));
+    applyRevZoom();
+  });
+  document.getElementById('revZoomOut')?.addEventListener('click', () => {
+    revZoomLevel = Math.max(REV_ZOOM_MIN, +(revZoomLevel - REV_ZOOM_STEP).toFixed(2));
+    applyRevZoom();
+  });
+  document.getElementById('revDownload')?.addEventListener('click', () => {
+    const src = revPreviewImg.src;
+    if(!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    const safeName = (revPreviewImg.alt || 'documento').replace(/[^a-z0-9-_]+/gi,'_');
+    a.download = safeName + '.jpg';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+  const revDetailBadge = document.getElementById('revDetailBadge');
+  const revNotaWrap = document.getElementById('revNotaWrap');
+  const revNotaText = document.getElementById('revNotaText');
+  const revNotaAvatar = document.getElementById('revNotaAvatar');
+  const revNotaWho = document.getElementById('revNotaWho');
+  const revNotaWhen = document.getElementById('revNotaWhen');
+  const revNotaLog = document.getElementById('revNotaLog');
+  const revNotaLogList = document.getElementById('revNotaLogList');
+  const revNotaLogSummary = document.getElementById('revNotaLogSummary');
+  const revNotaEditBtn = document.getElementById('revNotaEditBtn');
+  let selectedRow = null;
+
+  // ═══ Changelog del motivo por doc (memoria de sesión) ═══
+  // { [docKey]: [{ts, by, action, text}] }  action ∈ 'creado' | 'editado'
+  const DOC_NOTA_LOG = {};
+  function pushNotaLog(key, entry){
+    if(!DOC_NOTA_LOG[key]) DOC_NOTA_LOG[key] = [];
+    DOC_NOTA_LOG[key].push(entry);
+  }
+  function relTime(ts){
+    const diff = Date.now() - ts;
+    const m = Math.round(diff/60000);
+    if(m < 1) return 'hace instantes';
+    if(m < 60) return `hace ${m} min`;
+    const h = Math.round(m/60);
+    if(h < 24) return `hace ${h} h`;
+    const d = Math.round(h/24);
+    if(d < 7) return `hace ${d} d`;
+    const mm = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const date = new Date(ts);
+    return `${mm[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  }
+  function absTime(ts){
+    const d = new Date(ts);
+    const mm = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${mm[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} · ${hh}:${mi}`;
+  }
+  function initials(name){
+    return (name || 'R').split(' ').map(p => p[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+  }
+
+  function renderNotaCard(key, data){
+    revNotaText.textContent = data.nota || '—';
+    const log = DOC_NOTA_LOG[key] || [];
+    const last = log[log.length - 1];
+    const by = (last && last.by) || (Store && Store.REVISOR_NAME) || 'Revisor';
+    const ts = last ? last.ts : Date.now();
+    revNotaAvatar.textContent = initials(by);
+    revNotaWho.textContent = by;
+    revNotaWhen.textContent = (last && last.action === 'editado' ? 'Editado ' : '') + relTime(ts);
+    revNotaWhen.title = absTime(ts);
+    // Changelog: solo se muestra si hay más de 1 entrada
+    if(log.length > 1){
+      revNotaLog.hidden = false;
+      revNotaLogSummary.textContent = `Ver historial (${log.length - 1})`;
+      revNotaLogList.innerHTML = log.slice(0, -1).reverse().map(e =>
+        `<div class="rev-nota-card__log-item"><span><strong>${e.by}</strong> ${e.action === 'editado' ? 'editó' : 'creó'} el motivo <em>· ${absTime(e.ts)}</em></span></div>`
+      ).join('');
+    } else {
+      revNotaLog.hidden = true;
+      revNotaLog.open = false;
+      revNotaLogList.innerHTML = '';
+    }
+  }
+
+  function selectDocRow(row) {
+    docRows.forEach(r => r.classList.remove('doc-row--selected'));
+    row.classList.add('doc-row--selected');
+    selectedRow = row;
+
+    const key = row.dataset.docRow;
+    const status = row.dataset.docStatus;
+    const data = DOC_DATA[key];
+    const statusInfo = STATUS_MAP[status] || STATUS_MAP['en-revision'];
+
+    // Update detail name
+    revDetailName.textContent = data.nombre;
+
+    // Update badge
+    revDetailBadge.className = 'naowee-badge naowee-badge--quiet naowee-badge--small ' + statusInfo.cls;
+    revDetailBadge.textContent = statusInfo.text;
+
+    // Card read-only solo si el doc está rechazado
+    if (status === 'rechazado') {
+      revNotaWrap.hidden = false;
+      renderNotaCard(key, data);
+    } else {
+      revNotaWrap.hidden = true;
+    }
+
+    // Update preview image + reset zoom
+    revPreviewImg.src = data.img;
+    revPreviewImg.alt = data.nombre;
+    revZoomLevel = 1;
+    revPreviewImg.style.transform = 'scale(1)';
+
+    // Update action buttons visibility based on status
+    const approveBtn = document.querySelector('.rev-action-approve');
+    const rejectBtn = document.querySelector('.rev-action-reject');
+    if (approveBtn) {
+      approveBtn.style.display = (status === 'aprobado') ? 'none' : '';
+    }
+    if (rejectBtn) {
+      rejectBtn.style.display = (status === 'rechazado') ? 'none' : '';
+    }
+  }
+
+  docRows.forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.naowee-checkbox')) return;
+      selectDocRow(row);
+    });
+  });
+
+  // Select first row by default
+  if (docRows.length) selectDocRow(docRows[0]);
+
+  // Mapeo entre keys del HTML local de esc-12 y las del store (compartidas con esc-09)
+  const DOC_KEY_MAP = {
+    fotoFrontal: 'fotoFrontalGeneral',
+    fotoPanoramica: 'fotoPanoramica',
+    fotoInstalaciones: 'fotoInstalaciones',
+    fotoPanoramicaAerea: 'fotoPanoramica',
+    planoEscenario: 'planoEscenario',
+    planoLocalizacion: 'planoLocalizacion'
+  };
+
+  // ═══ Right panel action buttons ═══
+  document.querySelector('.rev-action-approve')?.addEventListener('click', () => {
+    if (!selectedRow) return;
+    selectedRow.dataset.docStatus = 'aprobado';
+    const leftBadge = selectedRow.querySelector('.naowee-badge');
+    if (leftBadge) {
+      leftBadge.className = 'naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small';
+      leftBadge.textContent = 'Aprobado';
+    }
+    // Persistir al store
+    if(Store){
+      const storeDocId = DOC_KEY_MAP[selectedRow.dataset.docRow] || selectedRow.dataset.docRow;
+      Store.approveDoc(revIdxInt, storeDocId, Store.REVISOR_NAME);
+    }
+    selectDocRow(selectedRow); // refresh panel
+    updateBulkActions();
+    showToast('Documento aprobado', 'success');
+  });
+
+  // ═══ Dialog Rechazar/Editar motivo ═══
+  const dlgRechazarDoc = document.getElementById('dialogRechazarDoc');
+  const dlgRechazarDocTitle = document.getElementById('dialogRechazarDocTitle');
+  const dlgRechazarDocName = document.getElementById('dialogRechazarDocName');
+  const dlgRechazarDocCopy = document.getElementById('dialogRechazarDocCopy');
+  const dlgRechazarDocMotivo = document.getElementById('dialogRechazarDocMotivo');
+  const dlgRechazarDocField = document.getElementById('dialogRechazarDocField');
+  const dlgRechazarDocConfirm = document.getElementById('dialogRechazarDocConfirm');
+  const dlgRechazarDocCancel = document.getElementById('dialogRechazarDocCancel');
+  let dlgRechazarDocRow = null;
+
+  function openRechazarDocDialog(row, mode){
+    dlgRechazarDocRow = row;
+    const key = row.dataset.docRow;
+    const data = DOC_DATA[key];
+    const isEdit = mode === 'edit';
+    dlgRechazarDocTitle.textContent = isEdit ? 'Editar motivo del rechazo' : 'Rechazar documento';
+    dlgRechazarDocName.textContent = (data && data.nombre) || 'Documento';
+    dlgRechazarDocCopy.textContent = isEdit
+      ? 'Actualiza el motivo del rechazo. El cambio quedará registrado en el historial.'
+      : 'Estás a punto de rechazar este documento. Ingresa el motivo para que el gestor pueda corregirlo.';
+    dlgRechazarDocConfirm.textContent = isEdit ? 'Guardar cambios' : 'Rechazar documento';
+    dlgRechazarDocMotivo.value = isEdit ? ((data && data.nota) || '') : '';
+    dlgRechazarDocField.classList.remove('naowee-textfield--error');
+    dlgRechazarDocConfirm.disabled = dlgRechazarDocMotivo.value.trim().length === 0;
+    dlgRechazarDoc.dataset.mode = isEdit ? 'edit' : 'create';
+    dlgRechazarDoc.classList.add('open');
+    setTimeout(() => { dlgRechazarDocMotivo.focus(); dlgRechazarDocMotivo.select(); }, 100);
+  }
+  function closeRechazarDocDialog(){
+    dlgRechazarDoc.classList.remove('open');
+    dlgRechazarDocRow = null;
+  }
+
+  dlgRechazarDocMotivo.addEventListener('input', () => {
+    const empty = dlgRechazarDocMotivo.value.trim().length === 0;
+    dlgRechazarDocConfirm.disabled = empty;
+    if(!empty) dlgRechazarDocField.classList.remove('naowee-textfield--error');
+  });
+  dlgRechazarDocCancel.addEventListener('click', closeRechazarDocDialog);
+  dlgRechazarDoc.addEventListener('click', (e) => {
+    if(e.target === dlgRechazarDoc) closeRechazarDocDialog();
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && dlgRechazarDoc.classList.contains('open')) closeRechazarDocDialog();
+  });
+
+  dlgRechazarDocConfirm.addEventListener('click', () => {
+    const motivo = dlgRechazarDocMotivo.value.trim();
+    if(!motivo){
+      dlgRechazarDocField.classList.add('naowee-textfield--error');
+      dlgRechazarDocMotivo.focus();
+      return;
+    }
+    const row = dlgRechazarDocRow;
+    if(!row){ closeRechazarDocDialog(); return; }
+    const mode = dlgRechazarDoc.dataset.mode || 'create';
+    const key = row.dataset.docRow;
+    const by = (Store && Store.REVISOR_NAME) || 'Revisor';
+    const now = Date.now();
+
+    if(mode === 'create'){
+      row.dataset.docStatus = 'rechazado';
+      const leftBadge = row.querySelector('.naowee-badge');
+      if (leftBadge){
+        leftBadge.className = 'naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small';
+        leftBadge.textContent = 'Rechazado';
+      }
+      if(DOC_DATA[key]) DOC_DATA[key].nota = motivo;
+      if(Store){
+        const storeDocId = DOC_KEY_MAP[key] || key;
+        Store.rejectDoc(revIdxInt, storeDocId, Store.REVISOR_NAME, motivo);
+      }
+      pushNotaLog(key, { ts: now, by, action: 'creado', text: motivo });
+      updateBulkActions();
+      showToast('Documento rechazado', 'error');
+    } else {
+      if(DOC_DATA[key]) DOC_DATA[key].nota = motivo;
+      if(Store){
+        const storeDocId = DOC_KEY_MAP[key] || key;
+        Store.update(revIdxInt, (() => {
+          const rec = Store.get(revIdxInt);
+          if(!rec.documentacion) rec.documentacion = {};
+          if(!rec.documentacion[storeDocId]) rec.documentacion[storeDocId] = { file: null };
+          rec.documentacion[storeDocId].notaRechazo = motivo;
+          return { documentacion: rec.documentacion };
+        })());
+      }
+      pushNotaLog(key, { ts: now, by, action: 'editado', text: motivo });
+      showToast('Motivo actualizado', 'success');
+    }
+    selectDocRow(row);
+    closeRechazarDocDialog();
+  });
+
+  document.querySelector('.rev-action-reject')?.addEventListener('click', () => {
+    if (!selectedRow) return;
+    openRechazarDocDialog(selectedRow, 'create');
+  });
+
+  revNotaEditBtn?.addEventListener('click', () => {
+    if (!selectedRow) return;
+    openRechazarDocDialog(selectedRow, 'edit');
+  });
+
+  // ═══ Checkbox toggle + smart bulk actions ═══
+  const bulkActions = document.getElementById('bulkActions');
+  const rejectCountEl = document.getElementById('rejectCount');
+  const approveCountEl = document.getElementById('approveCount');
+  const btnBulkReject = document.getElementById('btnBulkReject');
+  const btnBulkApprove = document.getElementById('btnBulkApprove');
+  const checkAll = document.getElementById('docCheckAll');
+
+  function getCheckedRows() {
+    const rows = [];
+    document.querySelectorAll('#docTableBody .naowee-checkbox[aria-checked="true"]').forEach(cb => {
+      const row = cb.closest('tr');
+      if (row) rows.push(row);
+    });
+    return rows;
+  }
+
+  function updateBulkActions() {
+    const checkedRows = getCheckedRows();
+    const totalChecked = checkedRows.length;
+
+    // Count rows eligible for each action
+    const canReject = checkedRows.filter(r => r.dataset.docStatus !== 'rechazado').length;
+    const canApprove = checkedRows.filter(r => r.dataset.docStatus !== 'aprobado').length;
+
+    // Show bulk bar only when 2+ checked
+    if (totalChecked >= 2) {
+      bulkActions.classList.add('visible');
+    } else {
+      bulkActions.classList.remove('visible');
+    }
+
+    // Update counts and disable if no eligible rows
+    rejectCountEl.textContent = canReject;
+    approveCountEl.textContent = canApprove;
+    btnBulkReject.disabled = canReject === 0;
+    btnBulkReject.style.opacity = canReject === 0 ? '.45' : '';
+    btnBulkApprove.disabled = canApprove === 0;
+    btnBulkApprove.style.opacity = canApprove === 0 ? '.45' : '';
+
+    // Update check-all state
+    const total = document.querySelectorAll('#docTableBody .naowee-checkbox').length;
+    if (totalChecked === total) {
+      checkAll.classList.add('naowee-checkbox--checked');
+      checkAll.setAttribute('aria-checked', 'true');
+    } else {
+      checkAll.classList.remove('naowee-checkbox--checked');
+      checkAll.setAttribute('aria-checked', 'false');
+    }
+  }
+
+  // Individual checkboxes
+  document.querySelectorAll('#docTableBody .naowee-checkbox').forEach(cb => {
+    cb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isChecked = cb.getAttribute('aria-checked') === 'true';
+      cb.classList.toggle('naowee-checkbox--checked', !isChecked);
+      cb.setAttribute('aria-checked', String(!isChecked));
+      updateBulkActions();
+    });
+  });
+
+  // Check all
+  checkAll.addEventListener('click', () => {
+    const isChecked = checkAll.getAttribute('aria-checked') === 'true';
+    const newState = !isChecked;
+    document.querySelectorAll('#docTableBody .naowee-checkbox').forEach(cb => {
+      cb.classList.toggle('naowee-checkbox--checked', newState);
+      cb.setAttribute('aria-checked', String(newState));
+    });
+    checkAll.classList.toggle('naowee-checkbox--checked', newState);
+    checkAll.setAttribute('aria-checked', String(newState));
+    updateBulkActions();
+  });
+
+  // Bulk reject — open confirmation dialog
+  const dialogBulkReject = document.getElementById('dialogBulkReject');
+  const bulkRejectDialogCount = document.getElementById('bulkRejectDialogCount');
+
+  btnBulkReject.addEventListener('click', () => {
+    const canReject = getCheckedRows().filter(r => r.dataset.docStatus !== 'rechazado').length;
+    if (canReject === 0) return;
+    bulkRejectDialogCount.textContent = canReject;
+    document.getElementById('bulkRejectNota').value = '';
+    dialogBulkReject.classList.add('open');
+  });
+
+  document.getElementById('dialogBulkRejectCancel').addEventListener('click', () => {
+    dialogBulkReject.classList.remove('open');
+  });
+
+  dialogBulkReject.addEventListener('click', (e) => {
+    if (e.target === dialogBulkReject) dialogBulkReject.classList.remove('open');
+  });
+
+  document.getElementById('dialogBulkRejectConfirm').addEventListener('click', () => {
+    const checkedRows = getCheckedRows();
+    let affected = 0;
+    checkedRows.forEach(row => {
+      if (row.dataset.docStatus !== 'rechazado') {
+        row.dataset.docStatus = 'rechazado';
+        const badge = row.querySelector('.naowee-badge');
+        if (badge) {
+          badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small';
+          badge.textContent = 'Rechazado';
+        }
+        affected++;
+      }
+    });
+    dialogBulkReject.classList.remove('open');
+    if (selectedRow) selectDocRow(selectedRow);
+    updateBulkActions();
+    if (affected) showToast(affected + ' documento' + (affected > 1 ? 's' : '') + ' rechazado' + (affected > 1 ? 's' : ''), 'error');
+  });
+
+  // Bulk approve — open confirmation dialog
+  const dialogBulkApprove = document.getElementById('dialogBulkApprove');
+  const bulkApproveDialogCount = document.getElementById('bulkApproveDialogCount');
+
+  btnBulkApprove.addEventListener('click', () => {
+    const canApprove = getCheckedRows().filter(r => r.dataset.docStatus !== 'aprobado').length;
+    if (canApprove === 0) return;
+    bulkApproveDialogCount.textContent = canApprove;
+    dialogBulkApprove.classList.add('open');
+  });
+
+  document.getElementById('dialogBulkApproveCancel').addEventListener('click', () => {
+    dialogBulkApprove.classList.remove('open');
+  });
+
+  dialogBulkApprove.addEventListener('click', (e) => {
+    if (e.target === dialogBulkApprove) dialogBulkApprove.classList.remove('open');
+  });
+
+  document.getElementById('dialogBulkApproveConfirm').addEventListener('click', () => {
+    const checkedRows = getCheckedRows();
+    let affected = 0;
+    checkedRows.forEach(row => {
+      if (row.dataset.docStatus !== 'aprobado') {
+        row.dataset.docStatus = 'aprobado';
+        const badge = row.querySelector('.naowee-badge');
+        if (badge) {
+          badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small';
+          badge.textContent = 'Aprobado';
+        }
+        affected++;
+      }
+    });
+    dialogBulkApprove.classList.remove('open');
+    if (selectedRow) selectDocRow(selectedRow);
+    updateBulkActions();
+    if (affected) showToast(affected + ' documento' + (affected > 1 ? 's' : '') + ' aprobado' + (affected > 1 ? 's' : ''), 'success');
+  });
+
+  // ═══ Historial filter (DS naowee-segment) ═══
+  document.querySelectorAll('.hist-filters .naowee-segment__item').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.hist-filters .naowee-segment__item').forEach(p => p.classList.remove('naowee-segment__item--active'));
+      pill.classList.add('naowee-segment__item--active');
+      const filter = pill.dataset.filter;
+      document.querySelectorAll('.timeline-item').forEach(item => {
+        if (filter === 'todos' || item.dataset.category === filter) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // ═══ Close overlays on outside click ═══
+  document.addEventListener('click', () => {
+    ps.classList.remove('open');
+  });
+
+  dialogAprobar.addEventListener('click', (e) => {
+    if(e.target === dialogAprobar) dialogAprobar.classList.remove('open');
+  });
+  dialogRechazar.addEventListener('click', (e) => {
+    if(e.target === dialogRechazar) dialogRechazar.classList.remove('open');
+  });
+
+  // ═══ Logout ═══
+  function fadeAndGo(url){document.body.style.transition='opacity .25s ease';document.body.style.opacity='0';setTimeout(()=>{window.location.href=url},260)}
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    try { sessionStorage.clear(); } catch(e){}
+    fadeAndGo('escenario-01-login.html');
+  });
+
+})();
+</script>
+<!-- Footer flotante Naowee -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+</body>
+</html>
