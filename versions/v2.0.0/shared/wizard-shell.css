@@ -1,0 +1,96 @@
+/* ═══════════════════════════════════════════════════════════════
+   WIZARD SHELL — sticky header + common layout
+   Se aplica a escenarios-04/05/06/07 del flujo de registro público.
+   ═══════════════════════════════════════════════════════════════ */
+
+html{overflow-x:hidden}
+body{overflow:visible}
+.auth-shell{
+  min-height:100vh;
+  background:#fff;
+  position:relative;
+}
+.auth-shell::before{
+  content:'';position:fixed;right:-280px;bottom:-280px;width:720px;height:720px;
+  background:radial-gradient(circle,rgba(255,117,0,.10) 0%,rgba(255,117,0,0) 70%);
+  pointer-events:none;z-index:0;
+}
+
+/* ═══ HEADER — sticky on scroll (no flex parent = works correctly) ═══ */
+.auth-header{
+  position:sticky;
+  top:0;
+  padding:40px 40px 0 40px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  z-index:20;
+  gap:24px;
+  background:#fff;
+  transition:padding .25s ease, border-color .25s ease, box-shadow .25s ease;
+  border-bottom:1px solid transparent;
+}
+.auth-header.is-stuck{
+  padding:16px 40px;
+  border-bottom-color:var(--naowee-color-border-default,#e7e9f3);
+  box-shadow:0 1px 2px rgba(40,40,52,.04);
+  align-items:center;
+}
+.auth-header.is-stuck .auth-header__actions{
+  padding-top:0;
+}
+
+/* Logos stay the same, just let the container shrink padding */
+.auth-header__logos{display:flex;align-items:center;gap:24px;transition:gap .25s ease}
+.auth-header.is-stuck .auth-header__logos{gap:16px}
+
+.logo-sep{width:1px;height:48px;background:var(--naowee-color-border-default,#d0d4e6);transition:height .25s ease}
+.auth-header.is-stuck .logo-sep{height:34px}
+
+.logo-ministerio{height:56px;width:auto;display:block;transition:height .25s ease}
+.auth-header.is-stuck .logo-ministerio{height:40px}
+
+.logo-suid{height:56px;width:auto;display:block;transition:height .25s ease}
+.auth-header.is-stuck .logo-suid{height:40px}
+
+.auth-header__actions{
+  padding-top:12px;
+  font-size:16px;
+  line-height:24px;
+  color:var(--naowee-color-text-secondary,#646587);
+  text-align:right;
+  transition:padding-top .25s ease, font-size .25s ease;
+}
+.auth-header.is-stuck .auth-header__actions{
+  font-size:14px;
+}
+.auth-header__actions a{
+  color:var(--naowee-color-text-accent,#d74009);
+  font-weight:600;
+  text-decoration:underline;
+  margin-left:4px;
+}
+.auth-header__actions a:hover{color:#b03507}
+
+/* Sentinel element used by IntersectionObserver to detect scroll */
+.auth-header__sentinel{
+  position:absolute;
+  top:0;
+  left:0;
+  height:1px;
+  width:1px;
+  pointer-events:none;
+}
+
+/* Force hidden attr to take precedence over DS flex display */
+.naowee-helper[hidden]{display:none !important}
+.naowee-message[hidden]{display:none !important}
+
+/* Responsive */
+@media(max-width:640px){
+  .auth-header{padding:24px 20px 0 20px;flex-wrap:wrap}
+  .auth-header.is-stuck{padding:12px 20px}
+  .auth-header__logos{gap:12px}
+  .logo-sep,.logo-ministerio{display:none}
+  .auth-header__actions{padding-top:0;font-size:14px}
+}

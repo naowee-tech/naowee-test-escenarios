@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID – Detalle del registro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/shell.css"/>
+<link rel="stylesheet" href="shared/transitions.css"/>
+<script src="shared/sidebar-state.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ESCENARIO 09 — Detalle de registro en revisión
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Sidebar logo override */
+.sidebar-logo .sb-logo-img{height:40px;width:auto;display:block;flex-shrink:0}
+.sidebar-logo .logo-sep{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.sidebar.collapsed .sb-logo-img,.sidebar.collapsed .sidebar-logo .logo-sep{display:none}
+.sidebar.collapsed .sidebar-logo{justify-content:center}
+.sidebar.collapsed .nav-row{padding:0}
+.sidebar.collapsed .nav-row .active-bar{display:none}
+
+/* Avatar en user chip */
+.user-chip{padding:8px 16px 8px 8px;max-width:220px;gap:10px}
+.user-chip .ava-ring{
+  width:40px;height:40px;
+  background:#FF7500;
+  color:#fff;font-size:13px;font-weight:700;
+}
+.user-chip__chevron svg{transition:transform .2s ease}
+.user-chip.is-open .user-chip__chevron svg{transform:rotate(180deg)}
+.user-chip .user-name{
+  font-size:14px;font-weight:600;color:var(--text-primary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip .user-role{
+  font-size:12px;color:var(--text-secondary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip__chevron{
+  display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:6px;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--text-secondary);flex-shrink:0;margin-left:4px;
+  transition:background .15s,color .15s;
+}
+.user-chip__chevron:hover{background:#FFEDC7;color:var(--accent)}
+.user-chip__chevron svg{width:14px;height:14px}
+
+/* ═══ BACK LINK (uses naowee-btn--link from DS) ═══ */
+.back-link-wrap{margin-bottom:20px}
+
+/* ═══ DETAIL HEADER ═══ */
+.detail-header{margin-bottom:24px}
+.detail-header__title{
+  font-size:24px;font-weight:700;line-height:30px;
+  color:var(--text-primary);margin:0 0 4px;
+}
+.detail-header__id{
+  font-size:14px;font-weight:400;color:var(--text-secondary);margin:0;
+}
+
+/* ═══ STATUS BANNER ═══ */
+/* Hero container */
+.hero-card{
+  background:var(--surface,#fff);
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:16px;
+  padding:24px;
+}
+
+/* Card container for tabs + content */
+.detail-card{
+  background:var(--surface,#fff);
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:16px;
+  overflow:hidden;
+}
+.detail-card .naowee-tabs{border-radius:0;margin-top:12px}
+.detail-card .tab-panel{padding:24px}
+.detail-card .tab-panel.active{display:block}
+
+/* ═══ TAB SWITCHER ═══ */
+/* Tabs use DS .naowee-tabs + .naowee-tab + .naowee-tab--selected */
+.detail-tabs{margin-bottom:28px}
+.tab-panel{display:none;animation:fadeInUp .35s cubic-bezier(.4,0,.2,1)}
+.tab-panel.active{display:block}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ SECTION (inside detail-card, no own border) ═══ */
+.detail-section{
+  padding-bottom:20px;
+  margin-bottom:20px;
+  border-bottom:1px solid var(--border,#e7e9f3);
+}
+.detail-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.detail-section__title{
+  font-size:12px;font-weight:700;letter-spacing:.5px;
+  color:#9c9ebf;text-transform:uppercase;
+  margin:0 0 20px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ═══ READ-ONLY FIELDS ═══ */
+.ro-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px}
+.ro-grid--3{grid-template-columns:1fr 1fr 1fr}
+.ro-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ro-field--full{grid-column:1/-1}
+.ro-field__label{
+  font-size:12px;font-weight:500;color:var(--text-secondary);
+  line-height:16px;
+}
+.ro-field__value{
+  font-size:14px;font-weight:500;color:var(--text-primary);
+  line-height:20px;word-break:break-word;
+}
+
+/* ═══ MAP ═══ */
+.detail-map{
+  width:100%;height:220px;
+  border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);
+  margin-top:16px;margin-bottom:8px;
+}
+
+/* ═══ SUB-ESPACIO CARD ═══ */
+.sub-card{
+  background:#f4f5f9;
+  border-radius:12px;
+  padding:16px 18px;
+  margin-bottom:10px;
+}
+.sub-card__name{
+  font-size:14px;font-weight:600;color:var(--text-primary);
+  margin:0 0 10px;
+}
+.sub-card__grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;
+}
+.sub-card__item{font-size:12px;color:var(--text-secondary)}
+.sub-card__item span{color:var(--text-primary);font-weight:500}
+
+/* ═══ DISCIPLINAS ═══ */
+.disc-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+
+/* ═══ DOC TABLE ═══ */
+.doc-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.doc-table thead tr{background:var(--naowee-color-background-secondary,#f4f5f9)}
+.doc-table thead th{
+  font-size:13px;font-weight:600;color:var(--text-secondary);
+  text-align:left;padding:10px 14px;
+  background:inherit;
+}
+.doc-table thead th:first-child{border-radius:10px 0 0 10px}
+.doc-table thead th:last-child{border-radius:0 10px 10px 0}
+.doc-table tbody td{
+  color:var(--text-primary);
+  padding:16px 14px;vertical-align:middle;
+  border-bottom:1px solid var(--border);
+}
+.doc-table tbody tr:last-child td{border-bottom:none}
+.doc-table tbody tr[data-doc-preview]{cursor:pointer;transition:background .15s}
+.doc-table tbody tr[data-doc-preview]:hover{background:#fafbfc}
+.doc-table tbody tr.doc-row--active{position:relative}
+.doc-table tbody tr.doc-row--active td:first-child::before{
+  content:'';position:absolute;left:0;top:8px;bottom:8px;
+  width:3px;border-radius:0 3px 3px 0;
+  background:var(--accent,#d74009);
+}
+/* Extension icon (uses SVG from shared/icons/) */
+.doc-ext-icon{
+  width:20px;height:20px;flex-shrink:0;
+}
+.doc-ext-icon img{width:100%;height:100%;object-fit:contain}
+/* Preview panel */
+.doc-preview{
+  background:var(--naowee-color-background-secondary,#f4f5f9);
+  border:1px solid var(--border,#e7e9f3);
+  border-radius:16px;overflow:hidden;
+  min-height:300px;display:flex;flex-direction:column;
+  position:relative;
+}
+.doc-preview__toolbar{
+  position:absolute;top:12px;right:12px;z-index:2;
+  display:flex;gap:6px;
+}
+.doc-preview__btn{
+  width:28px;height:28px;border:none;border-radius:6px;
+  background:rgba(255,255,255,.85);cursor:pointer;
+  color:var(--accent);display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+  backdrop-filter:blur(4px);
+}
+.doc-preview__btn:hover{background:var(--naowee-color-interactive-fill-quiet-hover,#FFDAA3)}
+.doc-preview__btn svg{width:16px;height:16px}
+.doc-preview__body{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.doc-preview__body img{
+  width:100%;height:auto;border-radius:8px;display:block;
+  transition:transform .2s ease;
+}
+
+/* ═══ TIMELINE — unificado con esc-10 (perfil activo) ═══ */
+.timeline{position:relative;padding-left:36px}
+.timeline-item{
+  position:relative;
+  padding-bottom:28px;
+  animation:fadeIn .3s cubic-bezier(.4,0,.2,1) both;
+}
+.timeline-item:last-child{padding-bottom:0}
+.timeline-item::before{
+  content:'';position:absolute;
+  left:-28px;top:24px;
+  width:2px;height:calc(100% - 12px);
+  background:var(--border-dark);
+}
+.timeline-item:last-child::before{display:none}
+.timeline-dot{
+  position:absolute;left:-36px;top:2px;
+  width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.timeline-dot.green{background:var(--green);color:#fff}
+.timeline-dot.blue{background:var(--blue-info,#1f78d1);color:#fff}
+.timeline-dot.orange{background:var(--naranja);color:#fff}
+.timeline-dot.gray{background:#a0a3bd;color:#fff}
+.timeline-dot svg{width:10px;height:10px;color:#fff;stroke:#fff}
+.timeline-content{display:flex;flex-direction:column;gap:2px}
+.timeline-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+.timeline-desc{font-size:13px;font-weight:400;color:var(--text-secondary);line-height:1.4}
+.timeline-date{font-size:12px;font-weight:400;color:#9c9ebf;margin-top:2px;display:flex;align-items:center;gap:4px}
+/* Historial filter count badge (DS segmented toggle) */
+.hist-filters{margin-bottom:20px;height:auto;padding:6px;max-width:100%}
+.hist-filters .naowee-segment__item{height:32px}
+.hist-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:16px;padding:0 5px;margin-left:6px;
+  font-size:10px;font-weight:600;line-height:1;
+  border-radius:var(--radius-full);
+  background:var(--border);color:var(--text-secondary);
+}
+.naowee-segment__item--active .hist-count{
+  background:var(--orange-bg);color:var(--accent);
+}
+
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(215,64,9,.35)}
+  50%{box-shadow:0 0 0 8px rgba(215,64,9,0)}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="burger-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Toggle sidebar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#282834" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <img src="shared/logos/ministerio.svg" alt="Ministerio del Deporte" class="sb-logo-img"/>
+      <div class="logo-sep"></div>
+      <img src="shared/logos/suid.png" alt="SUID" class="sb-logo-img"/>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">SEDES Y ESCENARIOS</div>
+
+      <div class="nav-row active">
+        <div class="active-bar"></div>
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="#d74009" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7v6M9 10h6" stroke="#d74009" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">Registro de escenarios</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="nav-row" id="btnLogout">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="lbl">Cerrar sesión</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+
+    <!-- ═══ TOP HEADER ═══ -->
+    <header class="top-header">
+      <div class="profile-switcher" style="position:relative" id="profileSwitcher">
+        <div class="user-chip" id="userChip">
+          <div class="ava">
+            <div class="ava-ring">JH</div>
+            <div class="ava-dot"></div>
+          </div>
+          <div class="user-info">
+            <span class="user-name">Juan Hernand...</span>
+            <span class="user-role">Gestor de escen...</span>
+          </div>
+          <button class="user-chip__chevron" type="button" aria-label="Cambiar rol">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+        <div class="role-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:240px;z-index:100;overflow:hidden">
+          <div style="padding:12px 16px;background:var(--naowee-color-interactive-fill-quiet-idle,#FFEDC7);cursor:default;display:flex;align-items:center;gap:10px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--accent)">Gestor de escenarios</div><div style="font-size:11px;color:var(--text-secondary)">Registro y gestión de sedes</div></div>
+          </div>
+          <div style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s" onclick="window.location.href='escenario-11-revisor-dashboard.html'" onmouseover="this.style.background='#f5f6fa'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Revisor</div><div style="font-size:11px;color:var(--text-secondary)">Aprobación de documentación</div></div>
+          </div>
+        </div>
+        </div>
+    </header>
+
+    <!-- ═══ PAGE ═══ -->
+    <div class="page">
+
+      <!-- Hero container (back + title + banner) -->
+      <div class="hero-card" style="margin-bottom:24px">
+        <!-- Back link -->
+        <button class="naowee-btn naowee-btn--link naowee-btn--small" id="btnBack" type="button" style="margin-bottom:16px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+          Regresar a la lista
+        </button>
+
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px">
+          <div style="flex:1;min-width:0">
+            <h1 class="detail-header__title" id="detailTitle" style="margin-bottom:4px">--</h1>
+            <p class="detail-header__id" id="detailId">ID: --</p>
+          </div>
+          <button class="naowee-btn naowee-btn--accent" id="btnSendToReview" type="button" style="display:none;flex-shrink:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            <span id="btnSendToReviewLabel">Enviar a revisión</span>
+          </button>
+        </div>
+
+        <!-- Status banner -->
+        <div class="naowee-message naowee-message--caution" id="statusBanner">
+          <div class="naowee-message__header">
+            <div class="naowee-message__icon" id="statusBannerIcon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="4" x2="8" y2="8"/><line x1="8" y1="11" x2="8" y2="11.01"/></svg>
+            </div>
+            <div class="naowee-message__title" id="statusBannerTitle">Registro en revisión</div>
+          </div>
+          <p class="naowee-message__text" id="bannerDate">Enviado el --</p>
+        </div>
+      </div>
+
+      <!-- Card container for tabs + content -->
+      <div class="detail-card">
+
+      <!-- Tab bar (DS naowee-tabs + animated indicator) -->
+      <div class="naowee-tabs naowee-tabs--proportional naowee-tabs--animated" data-naowee-tabs>
+        <button class="naowee-tab naowee-tab--selected" data-naowee-tab data-tab="general">Información general</button>
+        <button class="naowee-tab" data-naowee-tab data-tab="docs">Documentación</button>
+        <button class="naowee-tab" data-naowee-tab data-tab="historial">Historial</button>
+        <span class="naowee-tabs__indicator" aria-hidden="true"></span>
+      </div>
+
+      <!-- ═══ TAB 1: Información general ═══ -->
+      <div class="tab-panel active" id="panelGeneral">
+
+        <!-- Datos de pre-validación -->
+        <div class="detail-section">
+          <h3 class="detail-section__title">Datos de pre-validación</h3>
+          <div class="ro-grid">
+            <div class="ro-field ro-field--full">
+              <span class="ro-field__label">Nombre del escenario</span>
+              <span class="ro-field__value" id="fNombre">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Departamento</span>
+              <span class="ro-field__value" id="fDepartamento">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Municipio</span>
+              <span class="ro-field__value" id="fMunicipio">--</span>
+            </div>
+            <div class="ro-field ro-field--full">
+              <span class="ro-field__label">Número de registro catastral</span>
+              <span class="ro-field__value" id="fCatastral">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Latitud</span>
+              <span class="ro-field__value" id="fLat">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Longitud</span>
+              <span class="ro-field__value" id="fLon">--</span>
+            </div>
+            <div class="ro-field ro-field--full">
+              <span class="ro-field__label">Dirección</span>
+              <span class="ro-field__value" id="fDireccion">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Corregimiento</span>
+              <span class="ro-field__value" id="fCorregimiento">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Zona</span>
+              <span class="ro-field__value" id="fZona">--</span>
+            </div>
+          </div>
+          <div class="detail-map" id="mapContainer"></div>
+        </div>
+
+        <!-- Datos de propiedad -->
+        <div class="detail-section">
+          <h3 class="detail-section__title">Datos de propiedad</h3>
+          <div class="ro-grid">
+            <div class="ro-field">
+              <span class="ro-field__label">Entidad propietaria</span>
+              <span class="ro-field__value" id="fEntidad">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Tipo de propietario</span>
+              <span class="ro-field__value" id="fPropietario">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Entidad administradora</span>
+              <span class="ro-field__value" id="fAdministradora">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Tipo de tenencia</span>
+              <span class="ro-field__value" id="fTenencia">--</span>
+            </div>
+            <div class="ro-field ro-field--full">
+              <span class="ro-field__label">Responsable</span>
+              <span class="ro-field__value" id="fResponsable">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Teléfono</span>
+              <span class="ro-field__value" id="fTelefono">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">Correo electrónico</span>
+              <span class="ro-field__value" id="fCorreo">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos deportivos -->
+        <div class="detail-section">
+          <h3 class="detail-section__title">Datos deportivos</h3>
+          <div class="ro-grid">
+            <div class="ro-field">
+              <span class="ro-field__label">Tipo de escenario</span>
+              <span class="ro-field__value" id="fTipoEscenario">--</span>
+            </div>
+            <div class="ro-field">
+              <span class="ro-field__label">CAR</span>
+              <span class="ro-field__value" id="fCar">--</span>
+            </div>
+          </div>
+          <div id="fichaComun" style="margin-top:16px"></div>
+          <div id="subEspacios" style="margin-top:16px"></div>
+          <div id="disciplinas" style="margin-top:16px"></div>
+        </div>
+
+      </div>
+
+      <!-- ═══ TAB 2: Documentación ═══ -->
+      <div class="tab-panel" id="panelDocs">
+        <div style="display:grid;grid-template-columns:3fr 1px 2fr;gap:0;align-items:stretch;min-height:100%">
+          <!-- Left: Document table -->
+          <div style="padding-right:24px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+              <h3 class="detail-section__title" style="margin:0;padding:0;border:none">Fotografías del escenario</h3>
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);flex-shrink:0">
+                <span>Fecha de captura<span style="color:var(--accent)">*</span></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <span id="docFechaFotos" style="font-weight:500;color:var(--text-primary)">--</span>
+              </div>
+            </div>
+
+            <table class="doc-table" id="docTable">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th style="width:100px;text-align:center">Estado</th>
+                  <th style="width:140px;white-space:nowrap">Fecha de cargue</th>
+                  <th style="width:120px;text-align:center">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="docTableBody"></tbody>
+            </table>
+
+            <!-- Sub-espacio photos -->
+            <div id="subPhotos" style="margin-top:24px"></div>
+          </div>
+
+          <!-- Vertical divider (full height from tabs to bottom) -->
+          <div style="background:var(--border,#e7e9f3);width:1px;margin-top:-24px;margin-bottom:-24px"></div>
+
+          <!-- Right: Preview panel (sticky) -->
+          <div style="position:sticky;top:24px;padding-left:24px">
+            <h3 class="detail-section__title" id="docPreviewTitle" style="font-size:16px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--text-primary);margin-bottom:16px">Fotografía frontal del escenario</h3>
+            <div class="doc-preview" id="docPreviewContent">
+              <div class="doc-preview__toolbar">
+                <button class="doc-preview__btn" id="btnZoomIn" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                <button class="doc-preview__btn" id="btnZoomOut" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                <button class="doc-preview__btn" id="btnDownload" title="Descargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              </div>
+              <div class="doc-preview__body" id="docPreviewBody">
+                <div style="text-align:center;color:var(--text-secondary);font-size:13px">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:8px;opacity:.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <div>Selecciona un documento</div>
+                </div>
+              </div>
+            </div>
+            <!-- Reviewer rejection note (visible only when rechazado) -->
+            <div class="naowee-message naowee-message--negative" id="docReviewerNote" style="display:none;margin-top:16px">
+              <div class="naowee-message__header">
+                <div class="naowee-message__icon">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="8" x2="12" y2="8"/>
+                  </svg>
+                </div>
+                <div class="naowee-message__title">Motivo del rechazo</div>
+              </div>
+              <p class="naowee-message__text" id="docReviewerNoteText"></p>
+              <div class="naowee-message__text" style="font-size:12px;color:var(--naowee-color-text-secondary,var(--text-secondary))">
+                <span>Revisado por: </span><strong style="color:var(--naowee-color-text-primary,var(--text-primary))">María Alejandra Gómez</strong>
+                <span style="margin-left:8px" id="docReviewerNoteDate"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 3: Historial ═══ -->
+      <div class="tab-panel" id="panelHistorial">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h3 style="font-size:16px;font-weight:600;margin:0">Historial de Eventos</h3>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">Trazabilidad completa del registro</div>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary)" id="historialCount">-- eventos</div>
+        </div>
+
+        <!-- Filter segment (DS naowee-segment) -->
+        <div class="naowee-segment naowee-segment--small hist-filters" id="historialFilters" role="tablist">
+          <!-- JS will populate -->
+        </div>
+
+        <div class="timeline" id="timeline">
+          <!-- JS will populate -->
+        </div>
+      </div>
+
+      </div><!-- /detail-card -->
+
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="shared/escenarios-store.js"></script>
+<script src="shared/tabs.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
+<script>
+(function(){
+  'use strict';
+
+  // ═══ Profile switcher ═══
+  const ps09 = document.getElementById('profileSwitcher');
+  document.getElementById('userChip')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    ps09.classList.toggle('open');
+    ps09.querySelector('.role-dropdown')?.classList.toggle('open');
+  });
+  document.addEventListener('click', () => {
+    ps09?.classList.remove('open');
+    ps09?.querySelector('.role-dropdown')?.classList.remove('open');
+  });
+
+  // ═══ Parse query param ═══
+  const params = new URLSearchParams(window.location.search);
+  const idx = parseInt(params.get('idx')) || 0;
+
+  // ═══ Load data from EscStore (localStorage) ═══
+  const Store = window.EscStore;
+  let d = Store ? Store.get(idx) : null;
+
+  // ═══ Back link (must register before early return) ═══
+  document.getElementById('btnBack').addEventListener('click', () => {
+    window.location.href = 'escenario-08-dashboard.html?mode=multiple';
+  });
+
+  // ═══ TAB SWITCHER (shared/tabs.js maneja el --selected y el indicator) ═══
+  document.querySelectorAll('[data-naowee-tabs]').forEach(tabsEl => {
+    tabsEl.addEventListener('naowee-tab:change', (e) => {
+      const key = e.detail.tab.dataset.tab;
+      if (!key) return;
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('panel' + key.charAt(0).toUpperCase() + key.slice(1));
+      if (panel) panel.classList.add('active');
+    });
+  });
+
+  // Si no hay datos reales (URL inválida), volver al dashboard
+  if(!d){
+    window.location.href = 'escenario-08-dashboard.html?mode=multiple';
+    return;
+  }
+
+  // ═══ Month names ═══
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesesCortos = ['Ene.','Feb.','Mar.','Abr.','May.','Jun.','Jul.','Ago.','Sep.','Oct.','Nov.','Dic.'];
+
+  function fmtDate(ts){
+    const dt = new Date(ts);
+    return `${dt.getDate()} de ${MESES[dt.getMonth()]} de ${dt.getFullYear()}`;
+  }
+  function fmtDateTime(ts){
+    const dt = new Date(ts);
+    const h = dt.getHours() % 12 || 12;
+    const ampm = dt.getHours() >= 12 ? 'PM' : 'AM';
+    return `${mesesCortos[dt.getMonth()]} ${String(dt.getDate()).padStart(2,'0')}, ${dt.getFullYear()} ${h}:${String(dt.getMinutes()).padStart(2,'0')} ${ampm}`;
+  }
+
+  // ═══ Header ═══
+  document.getElementById('detailTitle').textContent = d.nombre || 'Sin nombre';
+  document.getElementById('detailId').textContent = 'ID: ' + (d.catastral || '--');
+
+  // ═══ Estado-driven banner (basado en d.status real, no en query param) ═══
+  const savedAt = d.savedAt || Date.now();
+  const estado = d.status || params.get('estado') || 'revision';
+
+  function setBanner(variant, iconSvg, title, dateText){
+    document.getElementById('statusBanner').className = 'naowee-message naowee-message--' + variant;
+    document.getElementById('statusBannerIcon').innerHTML = iconSvg;
+    document.getElementById('statusBannerTitle').textContent = title;
+    document.getElementById('bannerDate').textContent = dateText;
+  }
+
+  if (estado === 'borrador') {
+    setBanner('informative',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+      'Borrador',
+      'Último guardado el ' + fmtDate(savedAt));
+  } else if (estado === 'rechazado') {
+    setBanner('negative',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+      'Registro rechazado',
+      'Rechazado el ' + fmtDate(d.reviewedAt || savedAt));
+  } else if (estado === 'activo') {
+    setBanner('positive',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>',
+      'Registro activo',
+      'Aprobado el ' + fmtDate(d.reviewedAt || savedAt));
+  } else {
+    // revision
+    document.getElementById('bannerDate').textContent = 'Enviado el ' + fmtDate(d.sentAt || savedAt);
+  }
+
+  // (Back link + tab switcher already registered above early-return)
+
+  // ═══ TAB 1: Información general ═══
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = val || '--';
+  };
+
+  setText('fNombre', d.nombre);
+  setText('fDepartamento', d.departamento);
+  setText('fMunicipio', d.municipio);
+  setText('fCatastral', d.catastral);
+  setText('fLat', d.lat);
+  setText('fLon', d.lon);
+  setText('fDireccion', d.direccion);
+  setText('fCorregimiento', d.corregimiento);
+  setText('fZona', d.zona);
+  setText('fEntidad', d.entidad);
+  setText('fPropietario', d.propietario);
+  setText('fAdministradora', d.administradora);
+  setText('fTenencia', d.tenencia);
+  setText('fResponsable', d.responsable);
+  setText('fTelefono', d.telefono);
+  setText('fCorreo', d.correoResp);
+  setText('fTipoEscenario', d.tipoEscenario);
+  setText('fCar', d.car ? 'Si' : 'No');
+
+  // ═══ Ficha comun ═══
+  if(d.fichaComun){
+    const c = d.fichaComun;
+    const fcEl = document.getElementById('fichaComun');
+    let html = '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Ficha tecnica general</div>';
+    html += '<div class="ro-grid">';
+    const fcFields = [
+      ['Area total (m2)', c.areaTotal],
+      ['Area util (m2)', c.areaUtil],
+      ['Cubierta', c.cubierto],
+      ['Estado general', c.estado],
+      ['Capacidad espectadores', c.capacidad],
+      ['Ano de construccion', c.anioCons],
+    ];
+    fcFields.forEach(([label, val]) => {
+      if(val != null && val !== ''){
+        html += `<div class="ro-field"><span class="ro-field__label">${label}</span><span class="ro-field__value">${val}</span></div>`;
+      }
+    });
+    html += '</div>';
+    fcEl.innerHTML = html;
+  }
+
+  // ═══ Sub-espacios ═══
+  if(d.subEspacios && d.subEspacios.length > 0){
+    const seEl = document.getElementById('subEspacios');
+    let html = `<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Sub-espacios (${d.subEspacios.length})</div>`;
+    d.subEspacios.forEach((sub, i) => {
+      const tipo = sub.tipo || d.tipoEscenario || '';
+      html += '<div class="sub-card">';
+      html += `<div class="sub-card__name">${sub.nombre || tipo + ' ' + (i+1)}</div>`;
+      if(sub.ficha){
+        const entries = Object.entries(sub.ficha).filter(([k,v]) => v != null && v !== '' && v !== false);
+        if(entries.length > 0){
+          html += '<div class="sub-card__grid">';
+          entries.forEach(([k, v]) => {
+            const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+            html += `<div class="sub-card__item">${label}: <span>${v === true ? 'Si' : v}</span></div>`;
+          });
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    });
+    seEl.innerHTML = html;
+  }
+
+  // ═══ Disciplinas ═══
+  if(d.disciplinas && d.disciplinas.length > 0){
+    const discEl = document.getElementById('disciplinas');
+    let html = '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Disciplinas</div>';
+    html += '<div class="disc-wrap">';
+    d.disciplinas.forEach(disc => {
+      html += `<span class="naowee-badge naowee-badge--quiet naowee-badge--informative">${disc}</span>`;
+    });
+    html += '</div>';
+    discEl.innerHTML = html;
+  }
+
+  // ═══ MAP ═══
+  if(d.lat && d.lon){
+    const lat = parseFloat(d.lat);
+    const lon = parseFloat(d.lon);
+    if(!isNaN(lat) && !isNaN(lon)){
+      setTimeout(() => {
+        const map = L.map('mapContainer',{
+          scrollWheelZoom:false,
+          dragging:true,
+          zoomControl:true
+        }).setView([lat, lon], 15);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+          attribution:'&copy; OpenStreetMap &copy; CARTO',
+          maxZoom:19
+        }).addTo(map);
+        // Orange marker
+        const icon = L.divIcon({
+          className:'',
+          html:'<div style="width:24px;height:24px;background:#FF7500;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>',
+          iconSize:[24,24],
+          iconAnchor:[12,12]
+        });
+        L.marker([lat, lon], {icon}).addTo(map);
+      }, 100);
+    } else {
+      document.getElementById('mapContainer').style.display = 'none';
+    }
+  } else {
+    document.getElementById('mapContainer').style.display = 'none';
+  }
+
+  // ═══ TAB 2: Documentación ═══
+  const DOC_FIELDS = [
+    ['fotoFrontalGeneral','Foto frontal general','JPG / PNG'],
+    ['fotoPanoramica','Foto panorámica','JPG / PNG'],
+    ['fotoInstalaciones','Fotos instalaciones','JPG / PNG'],
+    ['planoEscenario','Plano del escenario','PDF / DWG'],
+    ['planoLocalizacion','Plano de localización','PDF / DWG'],
+    ['docPropiedad','Documento de propiedad','PDF'],
+    ['conceptoBomberos','Concepto bomberos','PDF'],
+    ['conceptoSalud','Concepto salud','PDF'],
+    ['conceptoInfraestructura','Concepto infraestructura','PDF'],
+    ['resolucionCreacion','Resolución de creación','PDF']
+  ];
+
+  // Fecha de fotos
+  const fechaFotosEl = document.getElementById('docFechaFotos');
+  if(d.documentacion && d.documentacion.fechaFotos){
+    const parts = d.documentacion.fechaFotos.split('-');
+    const mesesLargos = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    fechaFotosEl.textContent = `${parseInt(parts[2])} de ${mesesLargos[parseInt(parts[1])-1]} de ${parts[0]}`;
+  }
+
+  const docBody = document.getElementById('docTableBody');
+  let docHtml = '';
+  let firstLoadedId = null;
+
+  // Render per-document desde el store: usa docStatus real (pendiente/aprobado/rechazado)
+  // Fallback: si el doc no tiene archivo (file falsy), se considera "No cargado".
+  function getDocMeta(id){
+    const raw = d.documentacion ? d.documentacion[id] : null;
+    if(raw == null) return { file:null, docStatus:'sin', notaRechazo:null, reviewedAt:null };
+    if(typeof raw === 'string') return { file: raw, docStatus:'pendiente', notaRechazo:null, reviewedAt:null };
+    return raw;
+  }
+  function badgeForDoc(meta){
+    if(!meta.file) return '<span class="naowee-badge naowee-badge--quiet naowee-badge--neutral naowee-badge--small">No cargado</span>';
+    if(meta.docStatus === 'aprobado') return '<span class="naowee-badge naowee-badge--quiet naowee-badge--positive naowee-badge--small">Aprobado</span>';
+    if(meta.docStatus === 'rechazado') return '<span class="naowee-badge naowee-badge--quiet naowee-badge--negative naowee-badge--small">Rechazado</span>';
+    return '<span class="naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small">En revisión</span>';
+  }
+  DOC_FIELDS.forEach(([id, label]) => {
+    const meta = getDocMeta(id);
+    if(!firstLoadedId && meta.file) firstLoadedId = id;
+    const isPhoto = id.startsWith('foto');
+    const ext = isPhoto ? 'jpg' : 'pdf';
+    const extIcon = `<div class="doc-ext-icon"><img src="shared/icons/file-folded-format-${ext}.svg" alt="${ext.toUpperCase()}"/></div>`;
+    const statusBadge = badgeForDoc(meta);
+    const dateStr = meta.file ? new Date(meta.uploadedAt || savedAt).toLocaleDateString('es-CO', {month:'short', day:'2-digit', year:'numeric'}).replace('.','') : '';
+    // Upload CTA aparece si: no cargado, o cargado pero rechazado (gestor lo reemplaza)
+    const showUpload = !meta.file || meta.docStatus === 'rechazado';
+    const uploadCta = showUpload
+      ? `<label class="naowee-btn naowee-btn--mute naowee-btn--small" style="font-size:11px;color:var(--accent);gap:4px;cursor:pointer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Subir<input type="file" accept="${isPhoto?'image/*':'.pdf'}" style="display:none" data-upload-for="${id}"/></label>`
+      : '';
+    docHtml += `<tr data-doc-preview="${id}">
+      <td><div style="display:flex;align-items:center;gap:10px">${extIcon}<span>${label}</span></div></td>
+      <td style="text-align:center">${statusBadge}</td>
+      <td style="color:var(--text-secondary);white-space:nowrap">${dateStr}</td>
+      <td style="text-align:center">${uploadCta}</td>
+    </tr>`;
+  });
+  docBody.innerHTML = docHtml;
+
+  // File upload handlers — native file picker (persiste al store)
+  docBody.querySelectorAll('input[data-upload-for]').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const docId = input.dataset.uploadFor;
+      const row = input.closest('tr');
+      // Persistir al store: cambiar docStatus a 'pendiente' y limpiar nota
+      if(window.EscStore){
+        const current = d.documentacion || {};
+        current[docId] = {
+          file: file.name,
+          uploadedAt: Date.now(),
+          docStatus: 'pendiente',
+          notaRechazo: null,
+          reviewedAt: null
+        };
+        window.EscStore.update(idx, { documentacion: current });
+        d = window.EscStore.get(idx); // refresh local
+        window.EscStore.pushEvent(idx, window.EscStore.buildEvent(
+          'documentos', 'Documento subido',
+          `${window.EscStore.docLabel(docId)} fue cargado por el gestor.`,
+          'gestor', d.responsable || window.EscStore.GESTOR_NAME
+        ));
+      }
+      // Update badge to "En revisión"
+      const badge = row.querySelector('.naowee-badge');
+      if (badge) {
+        badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small';
+        badge.textContent = 'En revisión';
+      }
+      // Update date
+      const dateTd = row.querySelectorAll('td')[2];
+      if (dateTd) dateTd.textContent = new Date().toLocaleDateString('es-CO', {month:'short', day:'2-digit', year:'numeric'}).replace('.','');
+      // Remove upload button
+      const uploadLabel = input.closest('label');
+      if (uploadLabel) uploadLabel.remove();
+      // Show preview if image
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          // Store uploaded URL for preview
+          if (!window._uploadedFiles) window._uploadedFiles = {};
+          window._uploadedFiles[docId] = ev.target.result;
+          showDocPreview(docId);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        showDocPreview(docId);
+      }
+      // Select the row
+      docBody.querySelectorAll('.doc-row--active').forEach(r => r.classList.remove('doc-row--active'));
+      row.classList.add('doc-row--active');
+    });
+  });
+
+  // Demo photos (Unsplash sport venues)
+  const DEMO_PHOTOS = {
+    fotoFrontalGeneral: 'https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=600&h=400&fit=crop',
+    fotoPanoramica: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=600&h=400&fit=crop',
+    fotoInstalaciones: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop'
+  };
+
+  // Preview logic
+  let previewZoom = 1;
+  function showDocPreview(id){
+    const val = d.documentacion ? d.documentacion[id] : null;
+    const titleEl = document.getElementById('docPreviewTitle');
+    const bodyEl = document.getElementById('docPreviewBody');
+    const label = DOC_FIELDS.find(f => f[0] === id);
+    titleEl.textContent = label ? label[1] : 'Vista previa';
+    const isPhoto = id.startsWith('foto');
+    const uploadedImg = window._uploadedFiles && window._uploadedFiles[id];
+    const demoImg = DEMO_PHOTOS[id];
+    previewZoom = 1; // reset zoom on switch
+    if(uploadedImg){
+      bodyEl.innerHTML = `<img src="${uploadedImg}" alt="${label ? label[1] : 'Preview'}"/>`;
+    } else if(isPhoto && demoImg){
+      bodyEl.innerHTML = `<img src="${demoImg}" alt="${label ? label[1] : 'Preview'}"/>`;
+    } else if(!isPhoto){
+      // PDF: mostrar ícono de extensión
+      bodyEl.innerHTML = `<div style="text-align:center">
+        <div class="doc-ext-icon" style="width:64px;height:64px;margin:0 auto 12px"><img src="shared/icons/file-folded-format-pdf.svg" alt="PDF" style="width:100%;height:100%"/></div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px">${val || label[1]}</div>
+        <div style="font-size:12px;color:var(--text-secondary)">Documento PDF</div>
+      </div>`;
+    } else {
+      bodyEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px">Sin vista previa</div>';
+    }
+    // Clear active from ALL rows (main table + sub tables)
+    document.querySelectorAll('#panelDocs .doc-row--active').forEach(r => r.classList.remove('doc-row--active'));
+    const row = docBody.querySelector(`[data-doc-preview="${id}"]`);
+    if(row) row.classList.add('doc-row--active');
+
+    // Show/hide reviewer rejection note (lee del store: docStatus + notaRechazo)
+    const noteEl = document.getElementById('docReviewerNote');
+    if(noteEl){
+      const docMeta = getDocMeta(id);
+      if(docMeta.docStatus === 'rechazado' && docMeta.notaRechazo){
+        noteEl.querySelector('#docReviewerNoteText').textContent = docMeta.notaRechazo;
+        const reviewedAt = docMeta.reviewedAt || d.reviewedAt || savedAt;
+        noteEl.querySelector('#docReviewerNoteDate').textContent = new Date(reviewedAt).toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'}).replace('.','');
+        const reviewerEl = noteEl.querySelector('strong');
+        if(reviewerEl) reviewerEl.textContent = d.reviewerName || (window.EscStore ? window.EscStore.REVISOR_NAME : 'María Alejandra Gómez');
+        noteEl.style.display = '';
+      } else {
+        noteEl.style.display = 'none';
+      }
+    }
+  }
+
+  // Click rows → preview
+  docBody.querySelectorAll('[data-doc-preview]').forEach(row => {
+    row.addEventListener('click', () => showDocPreview(row.dataset.docPreview));
+  });
+
+  // Show first loaded doc preview by default
+  if(firstLoadedId) showDocPreview(firstLoadedId);
+
+  // Zoom in/out + download
+  document.getElementById('btnZoomIn').addEventListener('click', () => {
+    previewZoom = Math.min(3, previewZoom + 0.25);
+    const img = document.querySelector('#docPreviewBody img');
+    if(img) img.style.transform = `scale(${previewZoom})`;
+  });
+  document.getElementById('btnZoomOut').addEventListener('click', () => {
+    previewZoom = Math.max(0.5, previewZoom - 0.25);
+    const img = document.querySelector('#docPreviewBody img');
+    if(img) img.style.transform = `scale(${previewZoom})`;
+  });
+  document.getElementById('btnDownload').addEventListener('click', () => {
+    const img = document.querySelector('#docPreviewBody img');
+    if(img && img.src){
+      const a = document.createElement('a');
+      a.href = img.src; a.download = 'preview.jpg'; a.target = '_blank';
+      a.click();
+    }
+  });
+
+  // Sub-space photos (same table format as main docs)
+  const SUB_PHOTO_DEMOS = [
+    'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=600&h=400&fit=crop'
+  ];
+  if(d.subEspacios && d.subEspacios.length > 0){
+    const subPhotosEl = document.getElementById('subPhotos');
+    let spHtml = '';
+    d.subEspacios.forEach((sub, i) => {
+      const nombre = sub.nombre || (sub.tipo || d.tipoEscenario || 'Sub-espacio') + ' ' + (i+1);
+      spHtml += `<h3 class="detail-section__title" style="margin-top:24px">Fotos • ${nombre}</h3>`;
+      spHtml += `<table class="doc-table"><thead><tr><th>Foto</th><th style="width:100px;text-align:center">Estado</th><th style="width:140px;white-space:nowrap">Fecha de cargue</th></tr></thead><tbody>`;
+      const photoSlots = [
+        ['foto_frontal','Foto frontal'],
+        ['foto_2','Foto lateral'],
+        ['foto_3','Foto detalle'],
+        ['foto_4','Foto adicional'],
+        ['foto_5','Foto adicional 2']
+      ];
+      photoSlots.forEach(([pid,plabel]) => {
+        const v = sub.fotos ? sub.fotos[pid] : null;
+        const isLoaded = v || (pid === 'foto_frontal'); // demo: frontal siempre cargada
+        const badge = isLoaded
+          ? '<span class="naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small">En revisión</span>'
+          : '<span class="naowee-badge naowee-badge--quiet naowee-badge--neutral naowee-badge--small">No cargado</span>';
+        const dateStr = isLoaded ? new Date(savedAt).toLocaleDateString('es-CO',{month:'short',day:'2-digit',year:'numeric'}).replace('.','') : '';
+        const extIcon = '<div class="doc-ext-icon"><img src="shared/icons/file-folded-format-jpg.svg" alt="JPG"/></div>';
+        spHtml += `<tr data-sub-photo="${i}_${pid}" style="cursor:pointer">
+          <td><div style="display:flex;align-items:center;gap:10px">${extIcon}<span>${plabel}</span></div></td>
+          <td style="text-align:center">${badge}</td>
+          <td style="color:var(--text-secondary);white-space:nowrap">${dateStr}</td>
+        </tr>`;
+      });
+      spHtml += '</tbody></table>';
+    });
+    subPhotosEl.innerHTML = spHtml;
+
+    // Click on sub-photo rows → show preview
+    subPhotosEl.querySelectorAll('[data-sub-photo]').forEach(row => {
+      row.addEventListener('click', () => {
+        const [subIdx, photoId] = row.dataset.subPhoto.split('_');
+        const si = parseInt(subIdx);
+        const sub = d.subEspacios[si];
+        const nombre = sub?.nombre || 'Sub-espacio ' + (si+1);
+        const plabel = row.querySelector('span')?.textContent || 'Foto';
+        document.getElementById('docPreviewTitle').textContent = `${plabel} — ${nombre}`;
+        const demoImg = SUB_PHOTO_DEMOS[si % SUB_PHOTO_DEMOS.length];
+        document.getElementById('docPreviewBody').innerHTML = `<img src="${demoImg}" alt="${plabel}"/>`;
+        previewZoom = 1;
+        // Clear active from all rows (main + sub)
+        document.querySelectorAll('#panelDocs .doc-row--active').forEach(r => r.classList.remove('doc-row--active'));
+        row.classList.add('doc-row--active');
+      });
+    });
+  }
+
+  // ═══ TAB 3: Historial (dinámico desde el store) ═══
+  const timelineEl = document.getElementById('timeline');
+
+  const ICONS = {
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    send:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+    user:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    info:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  };
+  const clockDateIcon = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M6 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>';
+
+  // Mapeo evento del store → estilo del timeline (color + icono)
+  function styleForEvent(ev){
+    const t = (ev.title || '').toLowerCase();
+    if(t.includes('rechaz')) return { color:'red',    icon: ICONS.cross };
+    if(t.includes('aprob') || t.includes('activo')) return { color:'green', icon: ICONS.check };
+    if(t.includes('enviad') || t.includes('reenviad')) return { color:'blue', icon: ICONS.send };
+    if(t.includes('subido') || t.includes('cargad')) return { color:'green', icon: ICONS.check };
+    if(t.includes('revisor') || t.includes('asignad')) return { color:'blue', icon: ICONS.user };
+    if(t.includes('creado') || t.includes('borrador')) return { color:'gray', icon: ICONS.info };
+    return { color:'orange', icon: ICONS.clock };
+  }
+
+  // Eventos vienen del store, ordenados descendente (más reciente arriba)
+  const rawEvents = Array.isArray(d.historial) ? d.historial.slice().sort((a,b) => (b.ts||0) - (a.ts||0)) : [];
+  const tlEvents = rawEvents.map(ev => {
+    const sty = styleForEvent(ev);
+    return {
+      color: sty.color, icon: sty.icon,
+      title: ev.title || '—',
+      desc: (ev.desc || '') + (ev.actorName ? ' · Por ' + ev.actorName : ''),
+      date: fmtDateTime(ev.ts || Date.now()),
+      category: ev.category || 'estado'
+    };
+  });
+
+  // Count categories
+  const catCounts = {};
+  tlEvents.forEach(ev => { catCounts[ev.category] = (catCounts[ev.category]||0) + 1; });
+  document.getElementById('historialCount').textContent = tlEvents.length + ' eventos';
+
+  // Render filter segment (DS naowee-segment)
+  const filtersEl = document.getElementById('historialFilters');
+  let pillsHtml = `<button class="naowee-segment__item naowee-segment__item--active" data-filter="todos" type="button">Todos <span class="hist-count">${tlEvents.length}</span></button>`;
+  const catLabels = {estado:'Estado', documentos:'Documentos', asignaciones:'Asignaciones'};
+  Object.entries(catCounts).forEach(([cat, count]) => {
+    pillsHtml += `<button class="naowee-segment__item" data-filter="${cat}" type="button">${catLabels[cat]||cat} <span class="hist-count">${count}</span></button>`;
+  });
+  filtersEl.innerHTML = pillsHtml;
+
+  // Render timeline
+  timelineEl.innerHTML = tlEvents.map((ev, i) => `
+    <div class="timeline-item" data-category="${ev.category}" style="animation-delay:${(i*0.04).toFixed(2)}s">
+      <div class="timeline-dot ${ev.color}">${ev.icon}</div>
+      <div class="timeline-content">
+        <div class="timeline-title">${ev.title}</div>
+        <div class="timeline-desc">${ev.desc}</div>
+      </div>
+      <div class="timeline-date">${clockDateIcon} ${ev.date}</div>
+    </div>
+  `).join('');
+
+  // Filter segment logic
+  filtersEl.querySelectorAll('.naowee-segment__item').forEach(pill => {
+    pill.addEventListener('click', () => {
+      filtersEl.querySelectorAll('.naowee-segment__item').forEach(p => p.classList.remove('naowee-segment__item--active'));
+      pill.classList.add('naowee-segment__item--active');
+      const filter = pill.dataset.filter;
+      timelineEl.querySelectorAll('.timeline-item').forEach(item => {
+        item.style.display = (filter === 'todos' || item.dataset.category === filter) ? '' : 'none';
+      });
+    });
+  });
+
+  // ═══ Botón Enviar / Reenviar a revisión (solo borrador o rechazado) ═══
+  const btnSend = document.getElementById('btnSendToReview');
+  const btnSendLabel = document.getElementById('btnSendToReviewLabel');
+  if(btnSend){
+    if(estado === 'borrador'){
+      btnSend.style.display = '';
+      btnSendLabel.textContent = 'Enviar a revisión';
+    } else if(estado === 'rechazado'){
+      btnSend.style.display = '';
+      btnSendLabel.textContent = 'Reenviar a revisión';
+    } else {
+      btnSend.style.display = 'none';
+    }
+    btnSend.addEventListener('click', () => {
+      if(!window.EscStore) return;
+      const actor = d.responsable || window.EscStore.GESTOR_NAME;
+      window.EscStore.sendToReview(idx, actor);
+      window.EscStore.setToast({
+        title: estado === 'rechazado' ? 'Registro reenviado a revisión' : 'Registro enviado a revisión',
+        body: 'El revisor recibirá el registro y revisará los documentos.'
+      });
+      window.location.href = 'escenario-08-dashboard.html?mode=multiple';
+    });
+  }
+
+  // ═══ Logout ═══
+  function fadeAndGo(url){document.body.style.transition='opacity .25s ease';document.body.style.opacity='0';setTimeout(()=>{window.location.href=url},260)}
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    try { sessionStorage.clear(); } catch(e){}
+    fadeAndGo('escenario-01-login.html');
+  });
+
+})();
+</script>
+<!-- Footer flotante Naowee -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+</body>
+</html>

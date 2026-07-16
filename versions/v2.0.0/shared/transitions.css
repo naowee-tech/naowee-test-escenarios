@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════════════
+   WIZARD PAGE TRANSITIONS
+   Animaciones sutiles entrada/salida para los pasos del flujo.
+   Funciona con navegación clásica window.location.href sin SPA.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Entrada: fade + subtle slide up. Se aplica al body al cargar la página */
+@keyframes wizardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wizardFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Entrance (default on load) */
+.wizard-page-enter {
+  animation: wizardFadeIn .42s cubic-bezier(.16,.84,.3,1) both;
+}
+
+/* Exit (triggered by JS before navigation) */
+.wizard-page-exit {
+  animation: wizardFadeOut .24s cubic-bezier(.4,0,.7,1) forwards;
+  pointer-events: none;
+}
+
+/* Respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  .wizard-page-enter,
+  .wizard-page-exit {
+    animation: none !important;
+  }
+}

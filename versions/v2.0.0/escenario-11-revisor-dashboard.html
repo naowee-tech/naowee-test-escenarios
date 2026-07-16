@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID – Documentos pendientes (Revisor)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/shell.css"/>
+<script src="shared/sidebar-state.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ESCENARIO 11 — Dashboard del Revisor de documentación
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Sidebar logo override */
+.sidebar-logo .sb-logo-img{height:40px;width:auto;display:block;flex-shrink:0}
+.sidebar-logo .logo-sep{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.sidebar.collapsed .sb-logo-img,.sidebar.collapsed .sidebar-logo .logo-sep{display:none}
+.sidebar.collapsed .sidebar-logo{justify-content:center}
+.sidebar.collapsed .nav-row{padding:0}
+.sidebar.collapsed .nav-row .active-bar{display:none}
+
+/* Sub-nav items */
+.nav-sub{
+  display:flex;flex-direction:column;gap:2px;
+  padding:0 0 0 52px;
+}
+.nav-sub-item{
+  font-size:13px;font-weight:500;color:var(--text-secondary);
+  padding:8px 12px;border-radius:var(--radius-sm);
+  cursor:pointer;transition:background .12s,color .12s;
+}
+.nav-sub-item:hover{background:#f5f6fa}
+.nav-sub-item.active{color:var(--accent);font-weight:600}
+.sidebar.collapsed .nav-sub{display:none}
+
+/* Avatar en user chip */
+.user-chip{padding:8px 16px 8px 8px;max-width:220px;gap:10px}
+.user-chip .ava-ring{
+  width:40px;height:40px;
+  background:#7c3aed;
+  color:#fff;font-size:13px;font-weight:700;
+}
+.user-chip__chevron svg{transition:transform .2s ease}
+.user-chip:has(.role-dropdown.open) .user-chip__chevron svg,
+.profile-switcher:has(.role-dropdown.open) .user-chip__chevron svg{transform:rotate(180deg)}
+.user-chip .user-name{
+  font-size:14px;font-weight:600;color:var(--text-primary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip .user-role{
+  font-size:12px;color:var(--text-secondary);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-chip__chevron{
+  display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:6px;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--text-secondary);flex-shrink:0;margin-left:4px;
+  transition:background .15s,color .15s;
+}
+.user-chip__chevron:hover{background:#FFEDC7;color:var(--accent)}
+.user-chip__chevron svg{width:14px;height:14px}
+.role-dropdown.open{display:block!important}
+
+/* Profile switcher dropdown */
+.profile-switcher{position:relative}
+.profile-dd{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:100;
+  width:220px;background:#fff;
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(40,40,52,.12);
+  opacity:0;transform:translateY(-6px);pointer-events:none;
+  transition:opacity .2s,transform .2s;
+}
+.profile-switcher.open .profile-dd{
+  opacity:1;transform:translateY(0);pointer-events:auto;
+}
+.profile-dd__item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--text-primary);
+  transition:background .12s;border-radius:12px;
+}
+.profile-dd__item:hover{background:#f5f6fa}
+.profile-dd__item.active{
+  background:#FFEDC7;color:var(--accent);font-weight:600;
+}
+.profile-dd__item .dd-check{
+  width:16px;height:16px;flex-shrink:0;opacity:0;
+}
+.profile-dd__item.active .dd-check{opacity:1;color:var(--accent)}
+
+/* ═══ PAGE HEADER ═══ */
+.page-header{
+  display:flex;align-items:flex-start;gap:16px;margin-bottom:32px;
+}
+.page-header__title-group{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.page-header__title{font-size:24px;font-weight:700;line-height:28px;color:var(--text-primary);margin:0}
+.page-header__sub{font-size:16px;font-weight:400;line-height:24px;color:var(--text-secondary);margin:0}
+
+/* ═══ TABLET CONTAINER ═══ */
+.tablet{
+  border:1px solid var(--border);border-radius:20px;
+  padding:16px;background:var(--surface);
+  display:flex;flex-direction:column;gap:32px;
+  animation:fadeInUp .4s cubic-bezier(.4,0,.2,1);
+  overflow:visible;
+}
+
+/* ═══ TOOLBAR ═══ */
+.tablet-toolbar{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.toolbar-left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tablet .naowee-searchbox--pill{width:318px;max-width:100%}
+.tablet .naowee-searchbox--pill .naowee-searchbox__input-wrap{
+  border-radius:9999px;height:32px;padding:4px 10px;
+}
+
+/* Dropdown trigger */
+.toolbar-dd-wrap{position:relative;display:inline-flex}
+.toolbar-dd{
+  position:relative;display:inline-flex;align-items:center;gap:8px;justify-content:space-between;
+  height:32px;padding:4px 10px 4px 12px;
+  background:#fff;border:1px solid #8788ab;border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:400;color:var(--text-primary);
+  cursor:pointer;transition:border-color .15s,box-shadow .15s;min-width:120px;
+}
+.toolbar-dd:hover{border-color:#646587}
+.toolbar-dd:focus-visible,.toolbar-dd.open{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(215,64,9,.15);
+}
+.toolbar-dd svg{width:16px;height:16px;flex-shrink:0;color:var(--text-secondary);transition:transform .2s}
+.toolbar-dd.open svg{transform:rotate(180deg)}
+
+/* Menu del dropdown */
+.toolbar-dd-wrap .naowee-menu{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:50;
+  width:200px;min-width:200px;
+  opacity:0;transform:translateY(-6px);pointer-events:none;
+  transition:opacity .2s cubic-bezier(.4,0,.2,1),transform .2s cubic-bezier(.4,0,.2,1);
+}
+.toolbar-dd-wrap.open .naowee-menu{opacity:1;transform:translateY(0);pointer-events:auto}
+.toolbar-dd-wrap .naowee-menu__item{
+  padding:10px 12px;font-size:13px;line-height:18px;
+  display:flex;align-items:center;gap:10px;
+}
+.toolbar-dd-wrap .naowee-menu__item .dd-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.toolbar-dd-wrap .naowee-menu__item[aria-selected="true"]{
+  background:var(--naowee-color-interactive-fill-quiet-idle,#FFEDC7);
+  color:var(--accent);font-weight:600;
+}
+
+/* Paginator spacing fix */
+.tablet-toolbar .naowee-pagination{gap:24px}
+.tablet-toolbar .naowee-pagination__pages{gap:10px}
+.tablet-toolbar .naowee-pagination__input{margin:0 2px}
+.tablet-toolbar .naowee-pagination__total{margin-left:2px}
+.tablet-toolbar .naowee-pagination__controls{gap:6px;margin-left:4px}
+
+/* ═══ TABLA ═══ */
+.rev-table{
+  width:100%;border-collapse:separate;border-spacing:0;
+}
+.rev-table thead tr{background:#f4f5f9}
+.rev-table thead th{
+  height:56px;padding:8px 12px;
+  font-size:14px;font-weight:600;line-height:20px;
+  color:var(--text-secondary);text-align:left;vertical-align:middle;
+}
+.rev-table thead th:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px;padding-left:16px}
+.rev-table thead th:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px;padding-right:16px;text-align:center;width:60px}
+.rev-table tbody tr{
+  border-bottom:1px solid var(--border-dark);
+  transition:background .15s;
+  animation:fadeIn .35s cubic-bezier(.4,0,.2,1) both;
+}
+.rev-table tbody tr:nth-child(1){animation-delay:.05s}
+.rev-table tbody tr:nth-child(2){animation-delay:.1s}
+.rev-table tbody tr:nth-child(3){animation-delay:.15s}
+.rev-table tbody tr:nth-child(4){animation-delay:.2s}
+.rev-table tbody tr:last-child{border-bottom:none}
+.rev-table tbody tr:hover{background:#fafbfc}
+.rev-table tbody td{
+  height:72px;padding:12px;vertical-align:middle;
+  font-size:14px;color:var(--text-primary);
+}
+.rev-table tbody td:first-child{padding-left:16px}
+.rev-table tbody td:last-child{padding-right:16px;text-align:center;width:60px}
+
+.cell-check{width:40px}
+.cell-check input[type="checkbox"]{
+  width:18px;height:18px;accent-color:var(--accent);cursor:pointer;
+}
+.cell-date{font-size:13px;color:var(--text-secondary)}
+
+/* Bulk actions bar */
+.bulk-actions{display:none;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.bulk-actions.visible{display:flex;align-items:center}
+
+/* Context menu */
+.ctx-menu-wrap{position:relative;display:inline-flex;z-index:50}
+.ctx-menu-wrap.open{z-index:250}
+.ctx-menu{
+  position:absolute;top:calc(100% + 4px);right:0;z-index:200;
+  width:180px;background:#fff;
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(40,40,52,.12);
+  opacity:0;transform:translateY(-4px);pointer-events:none;
+  transition:opacity .15s,transform .15s;
+  padding:4px;
+}
+.ctx-menu-wrap.open .ctx-menu{opacity:1;transform:translateY(0);pointer-events:auto}
+.ctx-menu__item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:8px;
+  font-size:13px;font-weight:500;color:var(--text-primary);
+  cursor:pointer;transition:background .12s;
+}
+.ctx-menu__item:hover{background:#f5f6fa}
+.ctx-menu__item svg{width:16px;height:16px;flex-shrink:0;color:var(--text-secondary)}
+
+/* ═══ TOAST ═══ */
+/* Toast: positioned naowee-message */
+.toast-wrap{
+  position:fixed;bottom:20px;right:20px;z-index:200;
+  width:388px;max-width:calc(100vw - 40px);
+  animation:toastIn .5s cubic-bezier(.34,1.56,.64,1);
+  transition:opacity .3s ease, transform .3s ease;
+}
+.toast-wrap--leaving{opacity:0;transform:translateY(12px) scale(.97);pointer-events:none}
+
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ═══ DIALOG OVERLAY ═══ */
+.dialog-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,43,91,.45);backdrop-filter:blur(2px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+}
+.dialog-overlay.open{display:flex}
+.dialog{
+  width:440px;max-width:100%;background:#fff;border-radius:16px;
+  box-shadow:0 24px 48px rgba(0,0,0,.25);
+  display:flex;flex-direction:column;
+  animation:dialogIn .3s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes dialogIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.dialog__footer{
+  padding:16px 24px 24px;display:flex;gap:12px;justify-content:flex-end;
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="burger-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Toggle sidebar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#282834" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <img src="shared/logos/ministerio.svg" alt="Ministerio del Deporte" class="sb-logo-img"/>
+      <div class="logo-sep"></div>
+      <img src="shared/logos/suid.png" alt="SUID" class="sb-logo-img"/>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">GESTION</div>
+
+      <div class="nav-row">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="14 2 14 8 20 8" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">Documentación</span>
+      </div>
+
+      <div class="nav-sub">
+        <div class="nav-sub-item active">Aprobación</div>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="nav-row" id="btnLogout">
+        <div class="icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="lbl">Cerrar sesion</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+
+    <!-- ═══ TOP HEADER ═══ -->
+    <header class="top-header">
+      <div class="profile-switcher" id="profileSwitcher">
+        <div class="user-chip" id="userChip">
+          <div class="ava">
+            <div class="ava-ring">MA</div>
+            <div class="ava-dot"></div>
+          </div>
+          <div class="user-info">
+            <span class="user-name">María Alejandra Gómez</span>
+            <span class="user-role">Revisor</span>
+          </div>
+          <button class="user-chip__chevron" type="button" aria-label="Cambiar rol" onclick="event.stopPropagation();const p=this.closest('.profile-switcher');p.querySelector('.role-dropdown').classList.toggle('open');p.classList.toggle('open')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+        <div class="role-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:240px;z-index:100;overflow:hidden">
+          <div style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s" onclick="window.location.href='escenario-08-dashboard.html?mode=multiple'" onmouseover="this.style.background='#f5f6fa'" onmouseout="this.style.background=''">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Gestor de escenarios</div><div style="font-size:11px;color:var(--text-secondary)">Registro y gestión de sedes</div></div>
+          </div>
+          <div style="padding:12px 16px;background:var(--naowee-color-interactive-fill-quiet-idle,#FFEDC7);cursor:default;display:flex;align-items:center;gap:10px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>
+            <div><div style="font-size:13px;font-weight:600;color:var(--accent)">Revisor</div><div style="font-size:11px;color:var(--text-secondary)">Aprobación de documentación</div></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ PAGE ═══ -->
+    <div class="page">
+
+      <div class="page-header">
+        <div class="page-header__title-group">
+          <h1 class="page-header__title">Documentos pendientes</h1>
+          <p class="page-header__sub">Monitoreo y control de documentacion</p>
+        </div>
+      </div>
+
+      <!-- Tablet (card con tabla) -->
+      <div class="tablet">
+
+        <!-- Toolbar -->
+        <div class="tablet-toolbar">
+          <div class="toolbar-left">
+            <button class="naowee-btn naowee-btn--link naowee-btn--small" onclick="history.back()" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+              Volver
+            </button>
+
+            <div class="naowee-searchbox naowee-searchbox--small naowee-searchbox--pill" id="searchbox">
+              <div class="naowee-searchbox__input-wrap">
+                <span class="naowee-searchbox__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                </span>
+                <input type="text" class="naowee-searchbox__input" placeholder="Buscar escenario o ID" id="searchInput"/>
+                <button type="button" class="naowee-searchbox__clear" id="searchClear" aria-label="Limpiar busqueda">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="toolbar-dd-wrap" id="ddEstadosWrap">
+              <button type="button" class="toolbar-dd" id="ddEstados" aria-haspopup="listbox" aria-expanded="false">
+                <span id="ddEstadosLabel">Estado: Todos</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="naowee-menu naowee-menu--small" role="listbox" id="ddEstadosMenu">
+                <div class="naowee-menu__list">
+                  <div class="naowee-menu__item" role="option" data-value="todos" aria-selected="true">
+                    Todos los estados
+                  </div>
+                  <div class="naowee-menu__item" role="option" data-value="por-revisar">
+                    <span class="dd-dot" style="background:#d74009"></span>Por revisar
+                  </div>
+                  <div class="naowee-menu__item" role="option" data-value="activo">
+                    <span class="dd-dot" style="background:#1f8923"></span>Activo
+                  </div>
+                  <div class="naowee-menu__item" role="option" data-value="rechazado">
+                    <span class="dd-dot" style="background:#9e0015"></span>Rechazado
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="naowee-pagination naowee-pagination--small">
+            <div class="naowee-pagination__pages">
+              <span class="naowee-pagination__label">Pagina</span>
+              <input type="text" class="naowee-pagination__input" value="1" />
+              <span class="naowee-pagination__total">de <strong>1</strong></span>
+            </div>
+            <div class="naowee-pagination__controls">
+              <button type="button" class="naowee-pagination__btn" aria-label="Anterior" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button type="button" class="naowee-pagination__btn" aria-label="Siguiente" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk actions -->
+        <div class="bulk-actions" id="bulkActions">
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary)" id="bulkCount">0 seleccionados</span>
+          <button class="naowee-btn naowee-btn--mute naowee-btn--small" id="btnBulkApproveAll" type="button" style="color:#1f8923">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:#1f8923"><polyline points="20 6 9 17 4 12"/></svg>
+            Aprobar seleccionados
+          </button>
+          <button class="naowee-btn naowee-btn--mute naowee-btn--small" id="btnBulkRejectAll" type="button" style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:#e53935"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Rechazar seleccionados
+          </button>
+        </div>
+
+        <!-- Tabla -->
+        <table class="rev-table">
+          <thead>
+            <tr>
+              <th class="cell-check"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false" id="checkAll"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></th>
+              <th>Escenario o sede</th>
+              <th>ID unico</th>
+              <th>CAR</th>
+              <th>Estado</th>
+              <th>Ultima actualizacion</th>
+              <th aria-label="Acciones">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#646587"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRev">
+          </tbody>
+        </table>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ DIALOG: Confirmar aprobación ═══ -->
+<div class="dialog-overlay" id="dialogAprobar">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--green,#1f8923);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 16px">Aprobar registro</h3>
+      <p style="font-size:14px;color:var(--text-primary);line-height:22px;margin:0 0 16px">Estás a punto de aprobar este registro.</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0">Una vez aprobado, el estado cambiará a "Activo" y el escenario quedará habilitado en el sistema. ¿Deseas continuar?</p>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogAprobarCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogAprobarConfirm" style="background:var(--green,#1f8923);border-color:var(--green,#1f8923);min-width:160px">
+        Confirmar aprobación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazar registro ═══ -->
+<div class="dialog-overlay" id="dialogRechazar">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Rechazar registro</h3>
+      <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 12px">¿Deseas continuar?</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px">Estás a punto de rechazar este registro. Ingrese el motivo por el cual se rechaza.</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Nota</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="rechazoMotivo" placeholder="Escriba el motivo del rechazo..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogRechazarCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogRechazarConfirm" style="background:var(--accent,#d74009);border-color:var(--accent,#d74009);min-width:160px">
+        Rechazar registro
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Aprobar solicitud de actualización ═══ -->
+<div class="dialog-overlay" id="dialogAprobarSolicitud">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--blue-info,#1f78d1);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Aprobar solicitud de actualización</h3>
+      <p style="font-size:14px;color:var(--text-primary);line-height:22px;margin:0 0 12px">El gestor solicitó actualizar este registro activo.</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 12px" id="dialogAprobarSolicitudMotivo">—</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0">Al aprobar, el registro volverá a modo edición (borrador) para que el gestor realice los cambios y lo reenvíe a revisión.</p>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogAprobarSolicitudCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogAprobarSolicitudConfirm" style="background:var(--green,#1f8923);border-color:var(--green,#1f8923);min-width:160px">
+        Aprobar solicitud
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DIALOG: Rechazar solicitud de actualización ═══ -->
+<div class="dialog-overlay" id="dialogRechazarSolicitud">
+  <div class="dialog" style="text-align:center">
+    <div style="padding:36px 32px 0;display:flex;flex-direction:column;align-items:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--red-bg,#fff0ee);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent,#d74009)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+      <h3 style="font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 12px">Rechazar solicitud de actualización</h3>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 12px" id="dialogRechazarSolicitudMotivo">—</p>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:20px;margin:0 0 20px">Ingresa la razón por la que no procede la actualización solicitada. Esta nota se mostrará al gestor.</p>
+      <div class="naowee-textfield naowee-textfield--textarea" style="width:100%;text-align:left">
+        <label class="naowee-textfield__label naowee-textfield__label--required">Nota para el gestor</label>
+        <div class="naowee-textfield__input-wrap">
+          <textarea class="naowee-textfield__input" rows="3" id="rechazoSolicitudMotivo" placeholder="Indica por qué no se aprueba la actualización..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer" style="justify-content:space-between;padding:28px 32px">
+      <button class="naowee-btn naowee-btn--link" type="button" id="dialogRechazarSolicitudCancel" style="color:var(--accent)">Cancelar</button>
+      <button class="naowee-btn naowee-btn--loud" type="button" id="dialogRechazarSolicitudConfirm" style="background:var(--accent,#d74009);border-color:var(--accent,#d74009);min-width:160px">
+        Rechazar solicitud
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="shared/escenarios-store.js"></script>
+<script src="shared/sidebar-tooltips.js" defer></script>
+<script src="shared/page-transitions.js" defer></script>
+<script>
+(function(){
+  'use strict';
+
+  const Store = window.EscStore;
+
+  // ═══ Profile switcher ═══
+  const ps = document.getElementById('profileSwitcher');
+  const chip = document.getElementById('userChip');
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    ps.classList.toggle('open');
+    ps.querySelector('.role-dropdown')?.classList.toggle('open');
+  });
+
+  // ═══ Render dinámico de la tabla desde EscStore ═══
+  // Mostramos solo registros que pasaron por revisión (no borradores).
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function fmtShort(ts){ if(!ts) return '—'; const d = new Date(ts); return `${meses[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`; }
+
+  const STATE_BADGE = {
+    'revision':  { cls: 'naowee-badge--caution',  label: 'Por revisar' },
+    'activo':    { cls: 'naowee-badge--positive', label: 'Activo' },
+    'rechazado': { cls: 'naowee-badge--negative', label: 'Rechazado' }
+  };
+
+  function renderTable(){
+    const tbody = document.getElementById('tbodyRev');
+    if(!tbody) return;
+    const all = Store ? Store.getAll() : [];
+    // Mantener índice global del store (no reindexar) para que el detalle reciba el idx correcto.
+    // Ordenamos por el timestamp más reciente del registro (solicitud pendiente, revisión,
+    // envío o guardado) DESC para que los nuevos envíos del gestor aparezcan primero.
+    const visible = all.map((d, i) => ({ d, i }))
+      .filter(x => x.d.status !== 'borrador')
+      .sort((a, b) => {
+        const ta = (a.d.updateRequest && a.d.updateRequest.status === 'pending' ? a.d.updateRequest.createdAt : 0)
+          || a.d.reviewedAt || a.d.sentAt || a.d.savedAt || 0;
+        const tb = (b.d.updateRequest && b.d.updateRequest.status === 'pending' ? b.d.updateRequest.createdAt : 0)
+          || b.d.reviewedAt || b.d.sentAt || b.d.savedAt || 0;
+        return tb - ta;
+      });
+    if(visible.length === 0){
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text-secondary)">No hay registros para revisión.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = visible.map(({d, i}) => {
+      const meta = STATE_BADGE[d.status] || STATE_BADGE.revision;
+      const isActivo = d.status === 'activo';
+      // Solicitud de actualización pendiente (solo aplica sobre registros activos)
+      const hasPendingUR = d.updateRequest && d.updateRequest.status === 'pending';
+      // Mostrar acciones de revisión del registro completo SOLO si no es activo
+      // y no hay solicitud pendiente separada que deba manejarse primero.
+      const showActions = !isActivo;
+      const lastTs = (hasPendingUR ? d.updateRequest.createdAt : 0) || d.reviewedAt || d.sentAt || d.savedAt;
+      const urBadge = hasPendingUR
+        ? `<span class="naowee-badge naowee-badge--quiet naowee-badge--caution naowee-badge--small" title="El gestor solicitó actualizar este registro">✎ Solicitud pendiente</span>`
+        : '';
+      return `
+        <tr data-store-idx="${i}">
+          <td class="cell-check"><div class="naowee-checkbox" tabindex="0" role="checkbox" aria-checked="false" data-row-check="${i}"><div class="naowee-checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div></td>
+          <td>${d.nombre || '—'}</td>
+          <td>${d.catastral || '—'}</td>
+          <td>${d.car ? 'Si' : 'No'}</td>
+          <td>
+            ${hasPendingUR ? urBadge : `<span class="naowee-badge naowee-badge--quiet ${meta.cls} naowee-badge--small">${meta.label}</span>`}
+          </td>
+          <td class="cell-date">${fmtShort(lastTs)}</td>
+          <td>
+            <div class="ctx-menu-wrap">
+              <button class="naowee-btn naowee-btn--mute naowee-btn--icon naowee-btn--small ctx-trigger" type="button" aria-label="Acciones">
+                <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </button>
+              <div class="ctx-menu">
+                <div class="ctx-menu__item" data-action="ver" data-idx="${i}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  Ver
+                </div>
+                ${hasPendingUR ? `<div class="ctx-menu__item" data-action="aprobar-solicitud" data-idx="${i}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--naowee-color-feedback-fill-positive-loud,#1f8923)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style="color:var(--naowee-color-feedback-fill-positive-loud,#1f8923)">Aprobar solicitud</span>
+                </div>
+                <div class="ctx-menu__item" data-action="rechazar-solicitud" data-idx="${i}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--naowee-color-feedback-fill-negative-loud,#e53935)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">Rechazar solicitud</span>
+                </div>` : ''}
+                ${showActions ? `<div class="ctx-menu__item" data-action="aceptar" data-idx="${i}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--naowee-color-feedback-fill-positive-loud,#1f8923)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style="color:var(--naowee-color-feedback-fill-positive-loud,#1f8923)">Aceptar</span>
+                </div>
+                <div class="ctx-menu__item" data-action="rechazar" data-idx="${i}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--naowee-color-feedback-fill-negative-loud,#e53935)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span style="color:var(--naowee-color-feedback-fill-negative-loud,#e53935)">Rechazar</span>
+                </div>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  renderTable();
+
+  // ═══ Estado dropdown ═══
+  const ddWrap = document.getElementById('ddEstadosWrap');
+  const ddBtn = document.getElementById('ddEstados');
+  const ddMenu = document.getElementById('ddEstadosMenu');
+
+  ddBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = ddWrap.classList.toggle('open');
+    ddBtn.classList.toggle('open', isOpen);
+    ddBtn.setAttribute('aria-expanded', isOpen);
+  });
+
+  ddMenu.querySelectorAll('.naowee-menu__item').forEach(item => {
+    item.addEventListener('click', () => {
+      ddMenu.querySelectorAll('.naowee-menu__item').forEach(i => i.setAttribute('aria-selected','false'));
+      item.setAttribute('aria-selected','true');
+      const val = item.dataset.value;
+      document.getElementById('ddEstadosLabel').textContent = val === 'todos' ? 'Estado: Todos' : item.textContent.trim();
+      ddWrap.classList.remove('open');
+      ddBtn.classList.remove('open');
+      ddBtn.setAttribute('aria-expanded','false');
+      filterRows(val);
+    });
+  });
+
+  // ═══ Filter rows ═══
+  function filterRows(estado){
+    const rows = document.querySelectorAll('#tbodyRev tr');
+    const statusMap = {
+      'Por revisar':'por-revisar',
+      'Activo':'activo',
+      'Rechazado':'rechazado'
+    };
+    rows.forEach(row => {
+      if(estado === 'todos'){
+        row.style.display = '';
+        return;
+      }
+      const badge = row.querySelector('.naowee-badge');
+      const badgeText = badge ? badge.textContent.trim() : '';
+      const mapped = statusMap[badgeText] || '';
+      row.style.display = mapped === estado ? '' : 'none';
+    });
+  }
+
+  // ═══ Context menu actions ═══
+  let pendingActionIdx = null; // track which row is being acted upon
+  let pendingBulkIndices = null; // track bulk selection being acted upon
+
+  const dialogAprobar = document.getElementById('dialogAprobar');
+  const dialogRechazar = document.getElementById('dialogRechazar');
+  const dialogAprobarSolicitud = document.getElementById('dialogAprobarSolicitud');
+  const dialogRechazarSolicitud = document.getElementById('dialogRechazarSolicitud');
+
+  // Bind interactions: ctx menus + ctx items + row checkboxes (re-llamable tras renderTable)
+  function bindRowInteractions(){
+    document.querySelectorAll('#tbodyRev .ctx-trigger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.ctx-menu-wrap.open').forEach(w => {
+          w.classList.remove('open');
+          const prevRow = w.closest('tr');
+          if (prevRow) { prevRow.style.position = ''; prevRow.style.zIndex = ''; }
+        });
+        const wrap = btn.closest('.ctx-menu-wrap');
+        wrap.classList.toggle('open');
+        const row = wrap.closest('tr');
+        if (row && wrap.classList.contains('open')) {
+          row.style.position = 'relative';
+          row.style.zIndex = '100';
+        }
+      });
+    });
+    document.querySelectorAll('#tbodyRev .ctx-menu__item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = item.dataset.action;
+        const wrap = item.closest('.ctx-menu-wrap');
+        wrap.classList.remove('open');
+        const parentRow = item.closest('tr');
+        if (parentRow) { parentRow.style.position = ''; parentRow.style.zIndex = ''; }
+        const idx = item.dataset.idx;
+        if(action === 'ver' && idx != null){
+          const rec = Store ? Store.get(parseInt(idx)) : null;
+          const estado = (rec && rec.status === 'activo') ? 'activo' : (rec && rec.status === 'rechazado' ? 'rechazado' : 'por-revisar');
+          window.location.href = 'escenario-12-revisor-detalle.html?idx=' + idx + '&estado=' + estado;
+        } else if(action === 'aceptar'){
+          pendingActionIdx = idx;
+          dialogAprobar.classList.add('open');
+        } else if(action === 'rechazar'){
+          pendingActionIdx = idx;
+          const ta = document.getElementById('rechazoMotivo');
+          if(ta) ta.value = '';
+          dialogRechazar.classList.add('open');
+        } else if(action === 'aprobar-solicitud'){
+          pendingActionIdx = idx;
+          const rec = Store ? Store.get(parseInt(idx)) : null;
+          const motivo = (rec && rec.updateRequest && rec.updateRequest.motivo) ? rec.updateRequest.motivo : 'Sin motivo registrado.';
+          const mEl = document.getElementById('dialogAprobarSolicitudMotivo');
+          if(mEl) mEl.textContent = 'Motivo: ' + motivo;
+          dialogAprobarSolicitud.classList.add('open');
+        } else if(action === 'rechazar-solicitud'){
+          pendingActionIdx = idx;
+          const rec = Store ? Store.get(parseInt(idx)) : null;
+          const motivo = (rec && rec.updateRequest && rec.updateRequest.motivo) ? rec.updateRequest.motivo : 'Sin motivo registrado.';
+          const mEl = document.getElementById('dialogRechazarSolicitudMotivo');
+          if(mEl) mEl.textContent = 'Motivo del gestor: ' + motivo;
+          const ta = document.getElementById('rechazoSolicitudMotivo');
+          if(ta) ta.value = '';
+          dialogRechazarSolicitud.classList.add('open');
+        }
+      });
+    });
+    // Re-bind row checkboxes
+    document.querySelectorAll('#tbodyRev .naowee-checkbox').forEach(cb => {
+      cb.addEventListener('click', () => {
+        const isChecked = cb.classList.toggle('naowee-checkbox--checked');
+        cb.setAttribute('aria-checked', String(isChecked));
+        updateBulkState();
+      });
+    });
+  }
+  bindRowInteractions();
+
+  // ═══ Dialog helpers ═══
+  const BADGE_MAP = {
+    'activo':    { cls: 'naowee-badge--positive', label: 'Activo' },
+    'rechazado': { cls: 'naowee-badge--negative', label: 'Rechazado' },
+    'por-revisar': { cls: 'naowee-badge--caution', label: 'Por revisar' }
+  };
+
+  function persistEstado(idx, estado, motivo){
+    if(!Store) return;
+    const storeIdx = parseInt(idx, 10);
+    if(estado === 'activo'){
+      Store.approve(storeIdx, Store.REVISOR_NAME);
+    } else if(estado === 'rechazado'){
+      Store.reject(storeIdx, Store.REVISOR_NAME, motivo || '');
+    }
+  }
+
+  function updateRowBadge(idx, estado){
+    const rows = document.querySelectorAll('#tbodyRev tr');
+    const row = rows[parseInt(idx)];
+    if(!row) return;
+    const info = BADGE_MAP[estado];
+    if(!info) return;
+    const badge = row.querySelector('.naowee-badge');
+    if(badge){
+      badge.className = 'naowee-badge naowee-badge--quiet naowee-badge--small ' + info.cls;
+      badge.textContent = info.label;
+    }
+    // Remove Aceptar/Rechazar from context menu since row is no longer "Por revisar"
+    row.querySelectorAll('.ctx-menu__item[data-action="aceptar"], .ctx-menu__item[data-action="rechazar"]').forEach(el => el.remove());
+  }
+
+  function showToast(title, body, type){
+    document.querySelectorAll('.toast-wrap').forEach(t => t.remove());
+    const variant = type === 'error' ? 'negative' : 'positive';
+    const isSuccess = variant === 'positive';
+    const wrap = document.createElement('div');
+    wrap.className = 'toast-wrap';
+    wrap.innerHTML = `
+      <div class="naowee-message naowee-message--${variant}">
+        <div class="naowee-message__header">
+          <div class="naowee-message__icon">
+            ${isSuccess
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+              : '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="12" y2="8"/></svg>'
+            }
+          </div>
+          <div style="flex:1;min-width:0">
+            <p class="naowee-message__title">${title}</p>
+            <p class="naowee-message__text" style="margin-top:2px">${body}</p>
+          </div>
+          <button class="naowee-message__dismiss" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('.naowee-message__dismiss').addEventListener('click', () => {
+      wrap.classList.add('toast-wrap--leaving');
+      setTimeout(() => wrap.remove(), 300);
+    });
+    setTimeout(() => {
+      if(wrap.parentNode){
+        wrap.classList.add('toast-wrap--leaving');
+        setTimeout(() => wrap.remove(), 300);
+      }
+    }, 4000);
+  }
+
+  // ═══ Aprobar dialog ═══
+  document.getElementById('dialogAprobarCancel').addEventListener('click', () => {
+    dialogAprobar.classList.remove('open');
+    pendingActionIdx = null;
+    pendingBulkIndices = null;
+  });
+  document.getElementById('dialogAprobarConfirm').addEventListener('click', () => {
+    dialogAprobar.classList.remove('open');
+    if(pendingBulkIndices && pendingBulkIndices.length){
+      const n = pendingBulkIndices.length;
+      pendingBulkIndices.forEach(idx => persistEstado(idx, 'activo'));
+      renderTable();
+      bindRowInteractions();
+      clearBulkSelection();
+      showToast(n + ' registro' + (n > 1 ? 's' : '') + ' aprobado' + (n > 1 ? 's' : ''), 'Los escenarios han sido aprobados exitosamente.', 'success');
+      pendingBulkIndices = null;
+    } else if(pendingActionIdx != null){
+      persistEstado(pendingActionIdx, 'activo');
+      renderTable();
+      bindRowInteractions();
+      showToast('Registro aprobado', 'El escenario ha sido aprobado exitosamente.', 'success');
+      pendingActionIdx = null;
+    }
+  });
+  dialogAprobar.addEventListener('click', (e) => {
+    if(e.target === dialogAprobar){ dialogAprobar.classList.remove('open'); pendingActionIdx = null; pendingBulkIndices = null; }
+  });
+
+  // ═══ Rechazar dialog ═══
+  document.getElementById('dialogRechazarCancel').addEventListener('click', () => {
+    dialogRechazar.classList.remove('open');
+    pendingActionIdx = null;
+    pendingBulkIndices = null;
+  });
+  document.getElementById('dialogRechazarConfirm').addEventListener('click', () => {
+    dialogRechazar.classList.remove('open');
+    const motivo = (document.getElementById('rechazoMotivo')?.value || '').trim();
+    if(pendingBulkIndices && pendingBulkIndices.length){
+      const n = pendingBulkIndices.length;
+      pendingBulkIndices.forEach(idx => persistEstado(idx, 'rechazado', motivo));
+      renderTable();
+      bindRowInteractions();
+      clearBulkSelection();
+      showToast(n + ' registro' + (n > 1 ? 's' : '') + ' rechazado' + (n > 1 ? 's' : ''), 'Los escenarios han sido rechazados.', 'error');
+      pendingBulkIndices = null;
+    } else if(pendingActionIdx != null){
+      persistEstado(pendingActionIdx, 'rechazado', motivo);
+      renderTable();
+      bindRowInteractions();
+      showToast('Registro rechazado', 'El escenario ha sido rechazado.', 'error');
+      pendingActionIdx = null;
+    }
+  });
+  dialogRechazar.addEventListener('click', (e) => {
+    if(e.target === dialogRechazar){ dialogRechazar.classList.remove('open'); pendingActionIdx = null; pendingBulkIndices = null; }
+  });
+
+  // ═══ Aprobar solicitud de actualización ═══
+  document.getElementById('dialogAprobarSolicitudCancel').addEventListener('click', () => {
+    dialogAprobarSolicitud.classList.remove('open');
+    pendingActionIdx = null;
+  });
+  document.getElementById('dialogAprobarSolicitudConfirm').addEventListener('click', () => {
+    dialogAprobarSolicitud.classList.remove('open');
+    if(pendingActionIdx != null && Store){
+      Store.approveUpdateRequest(parseInt(pendingActionIdx, 10), Store.REVISOR_NAME);
+      renderTable();
+      bindRowInteractions();
+      showToast('Solicitud aprobada', 'El registro volvió a modo edición. El gestor podrá actualizarlo y reenviarlo a revisión.', 'success');
+      pendingActionIdx = null;
+    }
+  });
+  dialogAprobarSolicitud.addEventListener('click', (e) => {
+    if(e.target === dialogAprobarSolicitud){ dialogAprobarSolicitud.classList.remove('open'); pendingActionIdx = null; }
+  });
+
+  // ═══ Rechazar solicitud de actualización ═══
+  document.getElementById('dialogRechazarSolicitudCancel').addEventListener('click', () => {
+    dialogRechazarSolicitud.classList.remove('open');
+    pendingActionIdx = null;
+  });
+  document.getElementById('dialogRechazarSolicitudConfirm').addEventListener('click', () => {
+    const nota = (document.getElementById('rechazoSolicitudMotivo')?.value || '').trim();
+    if(!nota){
+      const ta = document.getElementById('rechazoSolicitudMotivo');
+      if(ta){ ta.focus(); ta.style.borderColor = 'var(--accent,#d74009)'; setTimeout(()=>{ ta.style.borderColor=''; }, 1500); }
+      return;
+    }
+    dialogRechazarSolicitud.classList.remove('open');
+    if(pendingActionIdx != null && Store){
+      Store.rejectUpdateRequest(parseInt(pendingActionIdx, 10), Store.REVISOR_NAME, nota);
+      renderTable();
+      bindRowInteractions();
+      showToast('Solicitud rechazada', 'Se notificó al gestor con tu motivo.', 'error');
+      pendingActionIdx = null;
+    }
+  });
+  dialogRechazarSolicitud.addEventListener('click', (e) => {
+    if(e.target === dialogRechazarSolicitud){ dialogRechazarSolicitud.classList.remove('open'); pendingActionIdx = null; }
+  });
+
+  // ═══ Checkbox + Bulk actions ═══
+  const checkAll = document.getElementById('checkAll');
+  const bulkActions = document.getElementById('bulkActions');
+  const bulkCountEl = document.getElementById('bulkCount');
+
+  function updateBulkState(){
+    const allRows = document.querySelectorAll('#tbodyRev .naowee-checkbox');
+    const checked = document.querySelectorAll('#tbodyRev .naowee-checkbox--checked');
+    const total = checked.length;
+    bulkCountEl.textContent = total + ' seleccionado' + (total !== 1 ? 's' : '');
+    bulkActions.classList.toggle('visible', total > 0);
+    if(total === allRows.length && total > 0){
+      checkAll.classList.add('naowee-checkbox--checked');
+      checkAll.setAttribute('aria-checked','true');
+    } else {
+      checkAll.classList.remove('naowee-checkbox--checked');
+      checkAll.setAttribute('aria-checked','false');
+    }
+  }
+
+  // (Row checkboxes se bindean dentro de bindRowInteractions arriba)
+
+  // Check all (header)
+  checkAll.addEventListener('click', () => {
+    const shouldCheck = checkAll.getAttribute('aria-checked') !== 'true';
+    document.querySelectorAll('#tbodyRev .naowee-checkbox').forEach(cb => {
+      cb.classList.toggle('naowee-checkbox--checked', shouldCheck);
+      cb.setAttribute('aria-checked', String(shouldCheck));
+    });
+    checkAll.classList.toggle('naowee-checkbox--checked', shouldCheck);
+    checkAll.setAttribute('aria-checked', String(shouldCheck));
+    updateBulkState();
+  });
+
+  function collectSelectedIndices(){
+    const checked = document.querySelectorAll('#tbodyRev .naowee-checkbox--checked');
+    const rows = Array.from(document.querySelectorAll('#tbodyRev tr'));
+    const out = [];
+    checked.forEach(cb => {
+      const row = cb.closest('tr');
+      const idx = rows.indexOf(row);
+      if(idx >= 0) out.push(String(idx));
+    });
+    return out;
+  }
+
+  function clearBulkSelection(){
+    document.querySelectorAll('#tbodyRev .naowee-checkbox--checked').forEach(cb => {
+      cb.classList.remove('naowee-checkbox--checked');
+      cb.setAttribute('aria-checked','false');
+    });
+    updateBulkState();
+  }
+
+  // Bulk approve all selected
+  document.getElementById('btnBulkApproveAll').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const indices = collectSelectedIndices();
+    if(!indices.length) return;
+    pendingBulkIndices = indices;
+    pendingActionIdx = null;
+    dialogAprobar.classList.add('open');
+  });
+
+  // Bulk reject all selected
+  document.getElementById('btnBulkRejectAll').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const indices = collectSelectedIndices();
+    if(!indices.length) return;
+    pendingBulkIndices = indices;
+    pendingActionIdx = null;
+    const ta = document.getElementById('rechazoMotivo');
+    if(ta) ta.value = '';
+    dialogRechazar.classList.add('open');
+  });
+
+  // ═══ Close dropdowns on outside click ═══
+  document.addEventListener('click', () => {
+    ps.classList.remove('open');
+    document.querySelectorAll('.role-dropdown.open').forEach(el => el.classList.remove('open'));
+    ddWrap.classList.remove('open');
+    ddBtn.classList.remove('open');
+    ddBtn.setAttribute('aria-expanded','false');
+    document.querySelectorAll('.ctx-menu-wrap.open').forEach(w => {
+      w.classList.remove('open');
+      const r = w.closest('tr');
+      if (r) { r.style.position = ''; r.style.zIndex = ''; }
+    });
+  });
+
+  // ═══ Logout ═══
+  function fadeAndGo(url){document.body.style.transition='opacity .25s ease';document.body.style.opacity='0';setTimeout(()=>{window.location.href=url},260)}
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    try { sessionStorage.clear(); } catch(e){}
+    fadeAndGo('escenario-01-login.html');
+  });
+
+})();
+</script>
+<!-- Footer flotante Naowee -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+</body>
+</html>

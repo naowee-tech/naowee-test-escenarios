@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Naowee Escenarios – Índice</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/shell.css"/>
+<style>
+.esc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:8px}
+.esc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-card);padding:24px;cursor:pointer;transition:transform .15s,box-shadow .15s;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:12px}
+.esc-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(145,158,171,.2)}
+.esc-tag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:#fff3e6;border-radius:var(--radius-full);padding:4px 10px;align-self:flex-start}
+.esc-title{font-size:16px;font-weight:700;color:var(--text-primary)}
+.esc-desc{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.esc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.esc-link{font-size:12px;font-weight:600;color:var(--accent)}
+.esc-placeholder{background:repeating-linear-gradient(45deg,#f5f6fa,#f5f6fa 10px,#fff 10px,#fff 20px);border:1px dashed var(--border-dark);color:var(--text-secondary)}
+.esc-placeholder:hover{transform:none;box-shadow:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="burger-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Toggle sidebar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="#282834" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <svg class="naowee-logo" viewBox="0 0 180 34" fill="none"><text x="0" y="24" font-family="Inter" font-weight="800" font-size="22" fill="#002B5B">Naowee</text></svg>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">ESCENARIOS</div>
+      <div class="nav-row active" onclick="window.location.href='index.html'">
+        <div class="active-bar"></div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#d74009" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#d74009" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#d74009" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#d74009" stroke-width="1.5"/></svg></div>
+        <span class="lbl">Índice</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="nav-row" id="btnLogout">
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="#B5B9D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="lbl">Cerrar sesión</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top-header">
+      <div class="user-chip">
+        <div class="ava"><div class="ava-ring" style="background:#c4b5fd;color:#4c1d95">DV</div><div class="ava-dot"></div></div>
+        <div class="user-info"><span class="user-name">Doug Vargas</span><span class="user-role">UX Designer</span></div>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="#282834" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+    </header>
+
+    <div class="page">
+      <h1 class="page-title">Escenarios UX/UI</h1>
+      <p class="page-sub">Módulo de Naowee. Colección de flujos y prototipos interactivos.</p>
+
+      <div class="esc-grid">
+
+        <a href="escenario-01-login.html" class="esc-card">
+          <span class="esc-tag">Auth · 01</span>
+          <div class="esc-title">Login SUID</div>
+          <div class="esc-desc">Pantalla de inicio de sesión con carrusel de 5 slides, header con logos oficiales, validación y CTA de registro de sede/escenario.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-02-recuperar-password.html" class="esc-card">
+          <span class="esc-tag">Auth · 02</span>
+          <div class="esc-title">Recuperar contraseña</div>
+          <div class="esc-desc">Flujo de recuperación con panel informativo azul, validación de email y estado de éxito tras envío del enlace.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-03-registrar-escenario.html" class="esc-card">
+          <span class="esc-tag">Registro · 03</span>
+          <div class="esc-title">Registrar escenario (intro)</div>
+          <div class="esc-desc">Landing pública para que un ciudadano inicie el registro de una sede o escenario deportivo en el SUID. Punto de entrada del wizard.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-04-registrar-prevalidacion.html" class="esc-card">
+          <span class="esc-tag">Registro · 04 · Paso 1/3</span>
+          <div class="esc-title">Pre-validación</div>
+          <div class="esc-desc">Paso 1 del wizard: datos básicos (nombre, departamento/municipio dependiente, catastral numérico, correo con 4 estados: empty/invalid/registered→login/available→continuar).</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-05-registrar-georreferenciacion.html" class="esc-card">
+          <span class="esc-tag">Registro · 05 · Paso 2/3</span>
+          <div class="esc-title">Georreferenciación</div>
+          <div class="esc-desc">Paso 2: mapa Leaflet + CartoDB Positron con marcador arrastrable, "marcar mi ubicación actual" (geolocation), "ubicarme en el mapa" (pick mode), lat/lon editables con tooltip ?, dirección, zona.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-06-registrar-propiedad.html" class="esc-card">
+          <span class="esc-tag">Registro · 06 · Paso 2/3</span>
+          <div class="esc-title">Datos de propiedad</div>
+          <div class="esc-desc">Paso 2: entidad propietaria, tipo de propietario, administradora, tipo de tenencia (con fecha vencimiento condicional), responsable solo letras, teléfono 10 dígitos.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-07-registrar-exito.html" class="esc-card">
+          <span class="esc-tag">Registro · 07 · Éxito</span>
+          <div class="esc-title">¡Registro completado!</div>
+          <div class="esc-desc">Pantalla final con check verde animado (pop + stroke draw + ring pulse), confetti canvas con colores Naowee, y CTA de continuar en la plataforma.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-08-dashboard.html?mode=empty" class="esc-card">
+          <span class="esc-tag">Dashboard · 08 · Empty</span>
+          <div class="esc-title">Sedes y escenarios — vacío</div>
+          <div class="esc-desc">Dashboard del ciudadano (Personal deportivo). Empty state con illustration SVG y CTA "Registrar el primer escenario". Sidebar + filtros + tabla.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-08-dashboard.html?mode=single" class="esc-card">
+          <span class="esc-tag">Dashboard · 08 · 1 registro</span>
+          <div class="esc-title">Sedes y escenarios — 1 registro</div>
+          <div class="esc-desc">Dashboard con 1 escenario en Borrador (badge informative) y toast verde flotante "Datos guardados correctamente" recién terminado el wizard.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-08-dashboard.html?mode=multiple" class="esc-card">
+          <span class="esc-tag">Dashboard · 08 · Varios</span>
+          <div class="esc-title">Sedes y escenarios — varios</div>
+          <div class="esc-desc">Dashboard con 4 escenarios y los 4 estados: Borrador (neutral), En revisión (caution), Activo (positive), Rechazado (negative). Acciones edit/view por estado.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+        <a href="escenario-template.html" class="esc-card">
+          <span class="esc-tag">Template</span>
+          <div class="esc-title">Escenario base</div>
+          <div class="esc-desc">Shell + sidebar + header listos para clonar. Punto de partida para cualquier escenario nuevo con dashboard layout.</div>
+          <div class="esc-footer">
+            <span class="esc-link">Abrir →</span>
+          </div>
+        </a>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function fadeAndGo(url){document.body.style.transition='opacity .25s ease';document.body.style.opacity='0';setTimeout(()=>{window.location.href=url},260)}
+document.getElementById('btnLogout')?.addEventListener('click', () => {
+  fadeAndGo('escenario-01-login.html');
+});
+</script>
+</body>
+</html>

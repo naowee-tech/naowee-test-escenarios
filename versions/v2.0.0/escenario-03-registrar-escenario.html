@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SUID – Registrar escenario</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="shared/design-system.css"/>
+<link rel="stylesheet" href="shared/transitions.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--naowee-font-family,'Inter',sans-serif);
+  background:var(--naowee-color-background-default,#fff);
+  color:var(--naowee-color-text-primary,#282834);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ═══ SHELL ═══ */
+.auth-shell{
+  min-height:100vh;display:flex;flex-direction:column;
+  background:#fff;position:relative;overflow:hidden;
+}
+/* Orange blob bottom-right (Figma: left 1195, top 753, 704x704) */
+.auth-shell::before{
+  content:'';position:absolute;right:-280px;bottom:-280px;width:720px;height:720px;
+  background:radial-gradient(circle,rgba(255,117,0,.10) 0%,rgba(255,117,0,0) 70%);
+  pointer-events:none;z-index:0;
+}
+
+/* ═══ HEADER ═══ */
+.auth-header{
+  padding:40px 40px 0 40px;display:flex;align-items:flex-start;justify-content:space-between;
+  position:relative;z-index:10;gap:24px;
+}
+.auth-header__logos{display:flex;align-items:center;gap:24px}
+.logo-sep{width:1px;height:48px;background:var(--naowee-color-border-default,#d0d4e6)}
+.logo-ministerio{height:56px;width:auto;display:block}
+.logo-suid{height:56px;width:auto;display:block}
+.auth-header__actions{
+  padding-top:12px;font-size:16px;line-height:24px;
+  color:var(--naowee-color-text-secondary,#646587);
+  text-align:right;
+}
+.auth-header__actions a{
+  color:var(--naowee-color-text-accent,#d74009);
+  font-weight:600;text-decoration:underline;margin-left:4px;
+}
+.auth-header__actions a:hover{color:#b03507}
+
+/* ═══ MAIN (centered) ═══ */
+.auth-main{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:40px 24px;position:relative;z-index:1;
+}
+
+.intro-card{
+  width:100%;max-width:528px;
+  display:flex;flex-direction:column;align-items:center;gap:72px;
+  text-align:center;
+}
+
+.intro-header{display:flex;flex-direction:column;gap:16px;width:100%}
+.intro-title{
+  font-size:32px;font-weight:600;line-height:40px;letter-spacing:0;
+  color:var(--naowee-color-text-primary,#282834);
+}
+.intro-subtitle{
+  font-size:16px;line-height:24px;color:var(--naowee-color-text-secondary,#646587);
+}
+.intro-subtitle strong{font-weight:600;color:var(--naowee-color-text-secondary,#646587)}
+
+/* CTA with fixed width per Figma */
+.intro-cta{width:344px;max-width:100%}
+
+.intro-legal{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:14px;font-weight:600;line-height:18px;
+}
+.intro-legal a{
+  color:#005be6;text-decoration:underline;
+}
+.intro-legal a:hover{color:#003eb3}
+.intro-legal span{color:var(--naowee-color-text-primary,#282834);text-decoration:none}
+
+/* Responsive */
+@media(max-width:640px){
+  .auth-header{padding:24px 20px 0 20px;flex-wrap:wrap}
+  .auth-header__logos{gap:12px}
+  .logo-sep,.logo-ministerio{display:none}
+  .auth-header__actions{padding-top:0;font-size:14px}
+  .intro-title{font-size:24px;line-height:32px}
+  .intro-card{gap:48px}
+  .intro-cta{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="auth-shell">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="auth-header">
+    <div class="auth-header__logos">
+      <img src="shared/logos/ministerio.svg" alt="Ministerio del Deporte Colombia" class="logo-ministerio"/>
+      <div class="logo-sep"></div>
+      <img src="shared/logos/suid.png" alt="SUID — Sistema Único de Información del Deporte" class="logo-suid"/>
+    </div>
+    <div class="auth-header__actions">
+      ¿Ya tienes una cuenta? <a href="escenario-01-login.html">Inicia sesión</a>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN (centered intro) ═══ -->
+  <main class="auth-main">
+    <div class="intro-card">
+
+      <div class="intro-header">
+        <h1 class="intro-title">Registrar un escenario</h1>
+        <p class="intro-subtitle">
+          <strong>Estás a punto de iniciar el registro de tu escenario deportivo.</strong><br/>
+          Completa el formulario con la información solicitada y, al final, finaliza tu registro para continuar en la plataforma.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="naowee-btn naowee-btn--loud naowee-btn--large intro-cta"
+        data-wizard-nav="escenario-04-registrar-prevalidacion.html"
+      >
+        Registrar escenario
+      </button>
+
+      <div class="intro-legal">
+        <a href="#">Politica de privacidad</a>
+        <span>y</span>
+        <a href="#">Términos y condiciones</a>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<script src="shared/transitions.js"></script>
+<!-- Footer flotante Naowee -->
+<div class="naowee-floating-footer" role="contentinfo" aria-label="Pie de página Naowee">
+  <img src="shared/logos/naowee.svg" alt="Naowee" class="naowee-floating-footer__logo"/>
+  <div class="naowee-floating-footer__sep"></div>
+  <span class="naowee-floating-footer__text">Todos los derechos reservados <strong>&copy; 2026</strong></span>
+</div>
+
+</body>
+</html>
