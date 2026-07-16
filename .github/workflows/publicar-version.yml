@@ -1,0 +1,123 @@
+name: Publicar versión de demo
+
+# Al publicar un release con tag vX.Y.Z, congela un snapshot de la demo
+# en versions/vX.Y.Z/ para que quede una URL estable por versión:
+#   https://naowee-tech.github.io/naowee-test-escenarios/versions/vX.Y.Z/
+# La raíz del sitio sigue siendo la versión de trabajo (latest).
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar-version
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main con historial completo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validar versión
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::El tag '$TAG' no tiene un formato válido. Usa vX.Y.Z, por ejemplo v0.10.0."
+            exit 1
+          fi
+
+          if [ -d "versions/$TAG" ]; then
+            echo "::error::La versión $TAG ya fue publicada y los snapshots no se sobreescriben. Borra este release y publica una versión nueva."
+            exit 1
+          fi
+
+          LATEST=""
+          if [ -d versions ]; then
+            LATEST=$(find versions -mindepth 1 -maxdepth 1 -type d -name 'v*' -exec basename {} \; | sort -V | tail -1)
+          fi
+          if [ -n "$LATEST" ]; then
+            HIGHEST=$(printf '%s\n%s\n' "$LATEST" "$TAG" | sort -V | tail -1)
+            if [ "$HIGHEST" != "$TAG" ] || [ "$TAG" = "$LATEST" ]; then
+              echo "::error::La versión $TAG es menor o igual que la última publicada ($LATEST). Usa una versión mayor."
+              exit 1
+            fi
+          fi
+
+      - name: Crear snapshot en versions/${{ github.event.release.tag_name }}
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p "versions/$TAG"
+          # Snapshot exacto del commit del tag (no del estado actual de main)
+          git archive "$TAG" | tar -x -C "versions/$TAG"
+          # El snapshot solo necesita la demo: fuera docs, workflows y versiones anteriores
+          rm -rf "versions/$TAG/.github" "versions/$TAG/.claude" "versions/$TAG/versions"
+          rm -f "versions/$TAG"/*.md
+
+      - name: Regenerar índice de versiones
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          {
+            cat <<'HEADER'
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Versiones — Demo Naowee Escenarios</title>
+            <style>
+              :root { color-scheme: light dark; }
+              body { font-family: 'Inter', system-ui, sans-serif; max-width: 640px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.6; }
+              h1 { font-size: 1.4rem; }
+              ul { list-style: none; padding: 0; }
+              li { display: flex; align-items: baseline; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid rgba(128,128,128,.25); }
+              .ver { font-weight: 700; min-width: 5.5rem; }
+              .date { opacity: .6; font-size: .85rem; min-width: 6.5rem; }
+              a { color: inherit; }
+              .latest { padding: .8rem 1rem; border: 1px solid rgba(128,128,128,.35); border-radius: 8px; margin-bottom: 1.5rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Versiones de la demo — Naowee Escenarios</h1>
+            <div class="latest">🚧 Versión de trabajo (puede cambiar en cualquier momento): <a href="../index.html">abrir latest</a></div>
+            <ul>
+          HEADER
+
+            for V in $(find versions -mindepth 1 -maxdepth 1 -type d -name 'v*' -exec basename {} \; | sort -rV); do
+              if [ "$V" = "$TAG" ]; then
+                DATE=$(date -u +%Y-%m-%d)
+              else
+                DATE=$(git log -1 --format=%as -- "versions/$V")
+                [ -z "$DATE" ] && DATE=$(date -u +%Y-%m-%d)
+              fi
+              echo "    <li><span class=\"ver\">$V</span><span class=\"date\">$DATE</span><a href=\"./$V/index.html\">abrir demo</a><a href=\"$REPO_URL/releases/tag/$V\">notas</a></li>"
+            done
+
+            cat <<'FOOTER'
+            </ul>
+          </body>
+          </html>
+          FOOTER
+          } > versions/index.html
+
+      - name: Commit y push a main
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add versions
+          git commit -m "chore(release): publicar snapshot de demo $TAG"
+          git pull --rebase origin main
+          git push origin main
